@@ -1,0 +1,50 @@
+networks: 
+  scanMap:
+services:
+  webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public/:/var/www/html/ # Mount the public folder
+      - ./src/:/var/www/src/ # Mount the src folder
+      - ./assets/:/var/www/assets/ #Mount the assets folder
+      - ./.env:/var/www/.env # Mount the .env file to a secure location
+    restart: unless-stopped
+    networks:
+      - scanMap
+  db:
+    image: mariadb:latest
+    container_name: db
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - database:/var/lib/mysql
+    networks: 
+      - scanMap
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: always
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "8081:80"
+    networks:
+      - scanMap
+
+volumes:
+  database:
