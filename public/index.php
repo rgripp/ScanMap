@@ -17,7 +17,7 @@ try {
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = [];
-    
+
     if (isset($_POST['resetDB'])) {
         $result = resetDatabase($pdo);
     } elseif (isset($_FILES['xmlFile'])) {
@@ -34,6 +34,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     echo json_encode($result);
     exit;
+}
+
+// Fetch scans data
+$scans = [];
+$stmt = $pdo->query("SELECT id, characterName, years, days, hours, minutes, seconds FROM scans ORDER BY id DESC");
+if ($stmt) {
+    $scans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
 
@@ -78,6 +85,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div id="Scans" class="tabcontent">
                 <h3>Scans</h3>
+                
+                <!-- Scans Table -->
+                <table id="scansTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable(0)">Scan ID</th>
+                            <th>Made By</th>
+                            <th onclick="sortTable(2)">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($scans as $scan): ?>
+                        <tr>
+                            <td>Scan <?= htmlspecialchars($scan['id']) ?></td>
+                            <td><?= htmlspecialchars($scan['characterName']) ?></td>
+                            <td>
+                                Year <?= $scan['years'] ?>, Day <?= $scan['days'] ?>, 
+                                <?= str_pad($scan['hours'], 2, '0', STR_PAD_LEFT) ?>:
+                                <?= str_pad($scan['minutes'], 2, '0', STR_PAD_LEFT) ?>:
+                                <?= str_pad($scan['seconds'], 2, '0', STR_PAD_LEFT) ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
                 <div class="button-container">
                     <!-- Combined Load/Upload Button -->
                     <div class="file-input-wrapper">
@@ -105,19 +138,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script>
         // Tab functionality
         function openTab(evt, tabName) {
-            // Hide all tab content
-            document.querySelectorAll('.tabcontent').forEach(tab => {
-                tab.style.display = 'none';
-            });
-            
-            // Remove active class from all tabs
-            document.querySelectorAll('.tablinks').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Show selected tab and mark as active
+            document.querySelectorAll('.tabcontent').forEach(tab => tab.style.display = 'none');
+            document.querySelectorAll('.tablinks').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabName).style.display = 'block';
             evt.currentTarget.classList.add('active');
+        }
+
+        // Sort table by column
+        function sortTable(n) {
+            let table = document.getElementById("scansTable");
+            let rows = Array.from(table.rows).slice(1);
+            let asc = table.dataset.sortOrder !== "asc";
+            table.dataset.sortOrder = asc ? "asc" : "desc";
+
+            rows.sort((a, b) => {
+                let x = a.cells[n].textContent.trim();
+                let y = b.cells[n].textContent.trim();
+                return asc ? x.localeCompare(y, undefined, { numeric: true }) : y.localeCompare(x, undefined, { numeric: true });
+            });
+
+            rows.forEach(row => table.appendChild(row));
         }
 
         // File upload handler
@@ -128,19 +168,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const formData = new FormData();
             formData.append('xmlFile', fileInput.files[0]);
 
-            fetch('', {
-                method: 'POST',
-                body: formData
-            })
+            fetch('', { method: 'POST', body: formData })
             .then(response => response.json())
-            .then(data => {
-                showNotification(data);
-                fileInput.value = ''; // Clear input
-            })
-            .catch(error => showNotification({
-                message: 'Upload failed: ' + error.message,
-                type: 'error'
-            }));
+            .then(data => { showNotification(data); fileInput.value = ''; })
+            .catch(error => showNotification({ message: 'Upload failed: ' + error.message, type: 'error' }));
         }
 
         // Database reset handler
@@ -148,16 +179,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const formData = new FormData();
             formData.append('resetDB', 'true');
 
-            fetch('', {
-                method: 'POST',
-                body: formData
-            })
+            fetch('', { method: 'POST', body: formData })
             .then(response => response.json())
             .then(data => showNotification(data))
-            .catch(error => showNotification({
-                message: 'Reset failed: ' + error.message,
-                type: 'error'
-            }));
+            .catch(error => showNotification({ message: 'Reset failed: ' + error.message, type: 'error' }));
         }
 
         // Notification system
@@ -165,17 +190,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const container = document.getElementById('notificationContainer');
             const notification = document.createElement('div');
             notification.className = `notification ${data.type}`;
-            notification.innerHTML = `
-                <span>${data.message}</span>
-                <button onclick="this.parentElement.remove()">&times;</button>
-            `;
+            notification.innerHTML = `<span>${data.message}</span><button onclick="this.parentElement.remove()">&times;</button>`;
             container.prepend(notification);
         }
 
-        // Initialize first tab
-        document.addEventListener('DOMContentLoaded', () => {
-            openTab(event, 'ScannedObjects');
-        });
+        document.addEventListener('DOMContentLoaded', () => openTab(event, 'ScannedObjects'));
     </script>
 </body>
 </html>

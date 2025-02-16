@@ -170,3 +170,13 @@ function insertScannedObjects($pdo, $xml, $scanID) {
         ]);
     }
 }
+
+function getScans($pdo) {
+    $stmt = $pdo->query("SELECT id, characterName, years, days, hours, minutes, seconds FROM scans ORDER BY years DESC, days DESC, hours DESC, minutes DESC, seconds DESC");
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function fetchScans($pdo) {
+    $stmt = $pdo->query("SELECT id, characterName, years, days, hours, minutes, seconds FROM scans ORDER BY id DESC");
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
