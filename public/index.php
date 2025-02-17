@@ -76,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetchScannedObjects']))
     <link rel="stylesheet" type="text/css" href="/assets/css/styles.css">
 </head>
 <body>
-<div class="main-container">
     <!-- Map Container -->
     <div class="map-container">
         <div class="grid">
@@ -100,79 +99,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetchScannedObjects']))
         <!-- The "Clear Filter" button will be appended here by JavaScript -->
     </div>
 
-        <!-- Tabs Container -->
-        <div class="tabs-container">
-            <div class="tabs">
-                <button class="tablinks active" onclick="openTab(event, 'ScannedObjects')">Scanned Objects</button>
-                <button class="tablinks" onclick="openTab(event, 'Scans')">Scans</button>
-            </div>
+    <!-- Tabs Container -->
+    <div class="tabs-container">
+        <div class="tabs">
+            <button class="tablinks active" onclick="openTab(event, 'ScannedObjects')">Scanned Objects</button>
+            <button class="tablinks" onclick="openTab(event, 'Scans')">Scans</button>
+        </div>
 
-            <div id="ScannedObjects" class="tabcontent" style="display: block;">
-    <!-- Table will be dynamically inserted here -->
-            </div>
+        <div id="ScannedObjects" class="tabcontent" style="display: block;">
+            <!-- Table will be dynamically inserted here -->
+        </div>
 
-            <div id="Scans" class="tabcontent">
-                <!-- Scans Table
-                <table id="scansTable">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable(0)">Scan ID</th>
-                            <th>Made By</th>
-                            <th onclick="sortTable(2)">Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($scans as $scan): ?>
-                        <tr>
-                            <td>Scan <?= htmlspecialchars($scan['id']) ?></td>
-                            <td><?= htmlspecialchars($scan['characterName']) ?></td>
-                            <td>
-                                Year <?= $scan['years'] ?>, Day <?= $scan['days'] ?>, 
-                                <?= str_pad($scan['hours'], 2, '0', STR_PAD_LEFT) ?>:
-                                <?= str_pad($scan['minutes'], 2, '0', STR_PAD_LEFT) ?>:
-                                <?= str_pad($scan['seconds'], 2, '0', STR_PAD_LEFT) ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table> -->
-                <table id="scansTable">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable(0)">Scan ID</th>
-                            <th>Made By</th>
-                            <th onclick="sortTable(2)">Time</th>
-                            <th>Action</th> <!-- Add this column for the View button -->
-                        </tr>
-                    </thead>
-                    <tbody>
-        <!-- Rows will be inserted here dynamically -->
-                    </tbody>
-                </table>
-                <div class="button-container">
-                    <!-- Combined Load/Upload Button -->
-                    <div class="file-input-wrapper">
-                        <input type="file" 
-                               name="xmlFile" 
-                               id="xmlFile" 
-                               accept=".xml" 
-                               onchange="handleFileUpload()"
-                               style="display: none">
-                        <button type="button" 
-                                class="custom-file-input"
-                                onclick="document.getElementById('xmlFile').click()">
-                            Load File
-                        </button>
-                    </div>
-                    
-                    <!-- Reset DB Button -->
-                    <button type="button" class="reset-button" onclick="handleResetDB()">Reset DB</button>
+        <div id="Scans" class="tabcontent">
+            <table id="scansTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Scan ID</th>
+                        <th>Made By</th>
+                        <th onclick="sortTable(2)">Time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be inserted here dynamically -->
+                </tbody>
+            </table>
+            <div class="button-container">
+                <!-- Combined Load/Upload Button -->
+                <div class="file-input-wrapper">
+                    <input type="file" 
+                           name="xmlFile" 
+                           id="xmlFile" 
+                           accept=".xml" 
+                           onchange="handleFileUpload()"
+                           style="display: none">
+                    <button type="button" 
+                            class="custom-file-input"
+                            onclick="document.getElementById('xmlFile').click()">
+                        Load File
+                    </button>
                 </div>
-                <div id="notificationContainer"></div>
+                
+                <!-- Reset DB Button -->
+                <button type="button" class="reset-button" onclick="handleResetDB()">Reset DB</button>
             </div>
+            <div id="notificationContainer"></div>
         </div>
     </div>
-
     <script>
 function openTab(evt, tabName) {
     // Hide all tab content

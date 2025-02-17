@@ -9,24 +9,37 @@ body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
     background-color: #f4f4f4;
-    padding: 10px;
-}
-
-/* Main Container with Responsive Layout */
-.main-container {
-    max-width: 900px;
-    margin: 0 auto;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px;
+    align-items: flex-start; /* Prevent stretching of child elements */
 }
 
-/* Responsive Layout for Larger Screens */
+/* Responsive Layout for Containers */
+.map-container,
+.tabs-container {
+    width: 100%;
+    max-width: 100%; /* Allow containers to grow dynamically */
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    margin: 0 auto;
+}
+
 @media screen and (min-width: 768px) {
-    .main-container {
-        flex-direction: row;
-        align-items: flex-start;
-        gap: 20px;
+    body {
+        flex-direction: row; /* Side-by-side layout on desktop */
+    }
+
+    .map-container {
+        max-width: 500px; /* Limit map container width on desktop */
+    }
+
+    .tabs-container {
+        max-width: 1200px; /* Limit tabs container width on desktop */
     }
 }
 
@@ -35,13 +48,6 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    padding: 10px;
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto;
 }
 
 /* Grid Layout */
@@ -49,11 +55,22 @@ body {
     display: grid;
     grid-template-columns: auto repeat(20, 1fr);
     background-color: #e0e0e0;
-    width: 100%;
-    max-width: 420px;
+    width: fit-content; /* Allow grid to grow with content */
+    max-width: 100%; /* Prevent overflow on mobile */
+    overflow-x: auto; /* Allow horizontal scrolling on mobile */
+    border-collapse: separate; /* Revert to default */
+    border-spacing: 0; /* Remove any spacing */
 }
 
-/* Grid Header Styling */
+.grid .cell {
+    background-color: #f0f0f0;
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid #ccc;
+    box-sizing: border-box; /* Include border in width calculation */
+    position: relative; /* For entity count badge */
+}
+
 .grid .header {
     background-color: #f0f0f0;
     display: flex;
@@ -63,14 +80,14 @@ body {
     font-size: 10px;
     font-weight: bold;
     text-align: center;
+    border: 1px solid #ccc;
+    box-sizing: border-box; /* Include border in width calculation */
 }
 
-/* Grid Cell Styling */
-.grid .cell {
-    background-color: #f0f0f0;
-    aspect-ratio: 1;
-    border: 1px solid #ccc;
-    position: relative;
+@media screen and (max-width: 480px) {
+    .grid .header {
+        font-size: 8px;
+    }
 }
 
 /* Entity Count Badge */
@@ -79,7 +96,7 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(0,0,0,0.7);
+    background-color: rgba(0, 0, 0, 0.7);
     color: white;
     font-size: 8px;
     min-width: 12px;
@@ -92,21 +109,11 @@ body {
     padding: 1px;
 }
 
-/* Tabs Container */
+/* Tabs Container Styling */
 .tabs-container {
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    padding: 10px;
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto;
-}
-
-@media screen and (min-width: 768px) {
-    .tabs-container {
-        max-width: 460px;
-    }
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 /* Tabs Styling */
@@ -117,12 +124,13 @@ body {
 
 .tabs button {
     flex: 1;
-    padding: 8px;
+    padding: 10px;
     border: none;
     background-color: #f0f0f0;
     cursor: pointer;
     transition: background-color 0.3s;
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 .tabs button.active {
@@ -143,14 +151,16 @@ table {
 
 table th, table td {
     border: 1px solid #ddd;
-    padding: 5px;
+    padding: 8px;
     text-align: left;
-    font-size: 10px;
+    font-size: 12px;
 }
 
 table th {
     background-color: #f0f0f0;
     cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
 }
 
 /* Button Container */
@@ -162,19 +172,31 @@ table th {
 }
 
 /* Button Styling */
-.custom-file-input, 
-.reset-button, 
+.custom-file-input,
+.reset-button,
 .view-button,
 .clear-filter-button {
-    flex: 1;
-    padding: 8px;
+    padding: 10px;
     background-color: #007bff;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s;
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Specific button width adjustments */
+.reset-button {
+    width: auto;
+    flex-grow: 0;
+    min-width: 100px;
+}
+
+.custom-file-input {
+    width: auto;
+    flex-grow: 1;
 }
 
 /* Notification Styling */
@@ -183,13 +205,13 @@ table th {
 }
 
 .notification {
-    padding: 8px;
-    margin-bottom: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
     border-radius: 4px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .notification.error {
@@ -213,7 +235,7 @@ table th {
 /* Row Status Highlighting */
 .friend { background-color: #d4f0d4; }
 .friend-leader { background-color: #a8e0a8; }
-.enemy { background-color:  #f0d4d4; }
+.enemy { background-color: #f0d4d4; }
 .enemy-leader { background-color: #e0a8a8; }
 .neutral { background-color: #d4f0ff; }
 .neutral-leader { background-color: #a8e0ff; }
