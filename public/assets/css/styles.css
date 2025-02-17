@@ -267,3 +267,42 @@ img {
     max-height: 50px;
     border-radius: 4px;
 }
+
+/* Add this to your existing CSS file */
+.clear-filter-button {
+    display: block;
+    margin: 10px auto; /* Center the button horizontally */
+    padding: 8px 16px;
+    background-color: #007bff; /* Blue background */
+    color: white; /* White text */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.clear-filter-button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* Grid cell colors for different IFF combinations */
+.grid .cell-friends {
+    background-color: #90EE90; /* Light green */
+}
+
+.grid .cell-enemies {
+    background-color: #FFB6C6; /* Light red */
+}
+
+.grid .cell-neutral {
+    background-color: #DDA0DD; /* Light purple */
+}
+
+.grid .cell-mixed {
+    background-color: #FFA500; /* Orange */
+}
+
+/* Add transition for smooth color changes */
+.grid .cell {
+    transition: background-color 0.3s ease;
+}

@@ -93,10 +93,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetchScannedObjects']))
 
                 <!-- Cells -->
                 <?php for ($x = 0; $x < 20; $x++): ?>
-                    <div class="cell"><a href="?x=<?= $x ?>&y=<?= $y ?>" title="(<?= $x ?>, <?= $y ?>)"></a></div>
+                    <div class="cell" data-x="<?= $x ?>" data-y="<?= $y ?>" title="(<?= $x ?>, <?= $y ?>)"></div>
                 <?php endfor; ?>
             <?php endfor; ?>
         </div>
+        <!-- The "Clear Filter" button will be appended here by JavaScript -->
     </div>
 
         <!-- Tabs Container -->
@@ -399,96 +400,64 @@ function fetchScannedObjects(scanID, event) {
 }
 function updateScannedObjectsTable(scannedObjects) {
     const scannedObjectsTab = document.getElementById('ScannedObjects');
-    if (!scannedObjectsTab) {
-        console.error('Scanned Objects tab not found');
-        return;
-    }
+    if (!scannedObjectsTab) return;
 
-    // Check if the table already exists
-    let table = scannedObjectsTab.querySelector('table');
-    if (!table) {
-        // Create a new table if it doesn't exist
-        scannedObjectsTab.innerHTML = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Image</th>
-                        <th>Entity ID</th>
-                        <th>Name</th>
-                        <th>Type Name</th>
-                        <th>Owner Name</th>
-                        <th>IFF Status</th>
-                        <th>X</th>
-                        <th>Y</th>
-                        <th>Travel Direction</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        `;
-        table = scannedObjectsTab.querySelector('table');
-    }
+    // Clear existing content but keep the table structure
+    scannedObjectsTab.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Entity ID</th>
+                    <th>Name</th>
+                    <th>Type Name</th>
+                    <th>Owner Name</th>
+                    <th>IFF Status</th>
+                    <th>X</th>
+                    <th>Y</th>
+                    <th>Travel Direction</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    `;
 
-    const tableBody = table.querySelector('tbody');
-    if (!tableBody) {
-        console.error('Table body not found');
-        return;
-    }
+    const tableBody = scannedObjectsTab.querySelector('tbody');
 
-    tableBody.innerHTML = ''; // Clear existing rows
-
-    // Group entries by partyLeaderUID
+    // Group objects by party
     const groupedObjects = {};
     scannedObjects.forEach(obj => {
-        const key = obj.partyLeaderUID || obj.entityUID; // Use partyLeaderUID if available, otherwise use entityUID
-        if (!groupedObjects[key]) {
-            groupedObjects[key] = [];
-        }
+        const key = obj.partyLeaderUID || obj.entityUID;
+        if (!groupedObjects[key]) groupedObjects[key] = [];
         groupedObjects[key].push(obj);
     });
 
-    console.log('Grouped Objects:', groupedObjects); // Debugging
-
-    // Ensure the party leader is first in each group
+    // Populate table with groups
     Object.values(groupedObjects).forEach(group => {
-        // Find the party leader in the group
-        const partyLeader = group.find(obj => obj.entityUID === (group[0].partyLeaderUID || group[0].entityUID));
-        console.log('Party Leader:', partyLeader); // Debugging
-        if (partyLeader) {
-            // Remove the party leader from the group
-            const leaderIndex = group.indexOf(partyLeader);
-            if (leaderIndex !== -1) {
-                group.splice(leaderIndex, 1);
-            }
-            // Add the party leader to the beginning of the group
-            group.unshift(partyLeader);
-        }
-        console.log('Group After Reordering:', group); // Debugging
-    });
+        const partyLeaderUID = group[0].partyLeaderUID || group[0].entityUID;
+        
+        // Sort the group to ensure party leader is first
+        group.sort((a, b) => {
+            if (a.entityUID === partyLeaderUID) return -1;
+            if (b.entityUID === partyLeaderUID) return 1;
+            return 0;
+        });
 
-    // Add rows to the table
-    Object.values(groupedObjects).forEach(group => {
-        // Find the party leader in the group
-        const partyLeader = group.find(obj => obj.entityUID === (group[0].partyLeaderUID || group[0].entityUID));
+        const partyLeader = group[0]; // Now guaranteed to be the leader
 
-        // Add a group header for parties
-        if (partyLeader) {
-            const headerRow = document.createElement('tr');
-            headerRow.className = `party-group ${getIffStatusClass(partyLeader.iffStatus, true)}`;
-            headerRow.innerHTML = `
-                <td colspan="9"><strong>Squad</strong></td>
-            `;
-            tableBody.appendChild(headerRow);
-        }
+        // Add party header
+        const headerRow = document.createElement('tr');
+        headerRow.className = `party-group ${getIffStatusClass(partyLeader.iffStatus, true)}`;
+        headerRow.innerHTML = `<td colspan="9"><strong>Squad</strong></td>`;
+        tableBody.appendChild(headerRow);
 
-        // Add each object in the group
+        // Add party members (leader will be first due to sort)
         group.forEach(obj => {
-            const isLeader = obj.entityUID === (partyLeader ? partyLeader.entityUID : null);
-            const rowClass = getIffStatusClass(obj.iffStatus, isLeader);
+            const isLeader = obj.entityUID === partyLeaderUID;
             const row = document.createElement('tr');
-            row.className = rowClass;
+            row.className = getIffStatusClass(obj.iffStatus, isLeader);
             row.innerHTML = `
-                <td><img src="${obj.image}" alt="${obj.name}" style="max-width: 50px; max-height: 50px;"></td>
+                <td><img src="${obj.image}" alt="${obj.name}" style="max-width: 50px;"></td>
                 <td>${obj.entityUID}</td>
                 <td>${obj.name}</td>
                 <td>${obj.typeName}</td>
@@ -518,6 +487,79 @@ function getIffStatusClass(iffStatus, isLeader = false) {
             return ''; // Ignore other IFF statuses
     }
 }
+
+function filterScannedObjectsByCoordinates(x, y) {
+    const scannedObjectsTab = document.getElementById('ScannedObjects');
+    const table = scannedObjectsTab.querySelector('table');
+    if (!table) return;
+
+    const rows = table.querySelectorAll('tbody tr');
+    let currentPartyHeader = null;
+    let hasVisibleMembersInParty = false;
+
+    rows.forEach(row => {
+        // Detect party headers
+        if (row.classList.contains('party-group')) {
+            // Reset visibility for new party group
+            currentPartyHeader = row;
+            hasVisibleMembersInParty = false;
+            row.style.display = 'none'; // Hide header by default
+        } 
+        // Process member rows
+        else if (currentPartyHeader) {
+            const rowX = parseInt(row.cells[6].textContent, 10); // X column
+            const rowY = parseInt(row.cells[7].textContent, 10); // Y column
+
+            if (rowX === x && rowY === y) {
+                row.style.display = '';
+                hasVisibleMembersInParty = true; // Show party header if any member matches
+            } else {
+                row.style.display = 'none';
+            }
+
+            // Show/hide party header based on visible members
+            if (hasVisibleMembersInParty) {
+                currentPartyHeader.style.display = '';
+            }
+        }
+    });
+}
+
+// Add event listeners to grid cells
+document.addEventListener('DOMContentLoaded', () => {
+    const gridCells = document.querySelectorAll('.grid .cell');
+    gridCells.forEach(cell => {
+        cell.addEventListener('click', () => {
+            const x = parseInt(cell.getAttribute('data-x'), 10);
+            const y = parseInt(cell.getAttribute('data-y'), 10);
+            filterScannedObjectsByCoordinates(x, y);
+        });
+    });
+});
+function clearFilter() {
+    const scannedObjectsTab = document.getElementById('ScannedObjects');
+    const table = scannedObjectsTab.querySelector('table');
+    if (!table) return;
+
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        row.style.display = ''; // Show all rows
+    });
+}
+
+// Add a "Clear Filter" button under the map
+document.addEventListener('DOMContentLoaded', () => {
+    const clearFilterButton = document.createElement('button');
+    clearFilterButton.textContent = 'Clear Filter';
+    clearFilterButton.classList.add('clear-filter-button'); // Add a class for styling
+    clearFilterButton.addEventListener('click', clearFilter);
+
+    // Append the button to the map-container
+    const mapContainer = document.querySelector('.map-container');
+    if (mapContainer) {
+        mapContainer.appendChild(clearFilterButton);
+    }
+});
     </script>
 </body>
 </html>

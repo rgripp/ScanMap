@@ -2,9 +2,10 @@ networks:
   scanMap:
 services:
   webserver:
-    build:
-      context: .
-      dockerfile: Dockerfile
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+    image: rgripp/scanmap
     ports:
       - "8080:80"
     volumes:
@@ -31,20 +32,20 @@ services:
       - database:/var/lib/mysql
     networks: 
       - scanMap
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    container_name: phpmyadmin
-    restart: always
-    depends_on:
-      - db
-    environment:
-      PMA_HOST: db
-      PMA_USER: ${MYSQL_USER}
-      PMA_PASSWORD: ${MYSQL_PASSWORD}
-    ports:
-      - "8081:80"
-    networks:
-      - scanMap
+#  phpmyadmin:
+#    image: phpmyadmin/phpmyadmin:latest
+#    container_name: phpmyadmin
+#    restart: always
+#    depends_on:
+#      - db
+#    environment:
+#      PMA_HOST: db
+#      PMA_USER: ${MYSQL_USER}
+#      PMA_PASSWORD: ${MYSQL_PASSWORD}
+#    ports:
+#      - "8081:80"
+#    networks:
+#      - scanMap
 
 volumes:
   database:
