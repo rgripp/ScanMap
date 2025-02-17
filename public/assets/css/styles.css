@@ -1,308 +1,219 @@
-/* General styles */
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f9f9f9;
+/* Global Reset and Base Styling */
+* {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
-/* Main container */
-.main-container {
-    display: flex;
-    padding: 20px;
-    gap: 20px;
-    height: calc(100vh - 40px); /* Full height minus padding */
-}
-
-/* Map container */
-.map-container {
-    width: 440px; /* 21 columns * 20px + 20px (header) */
-    height: 440px; /* 21 rows * 20px + 20px (header) */
-    background-color: #fff;
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #f4f4f4;
     padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden; /* Prevent scrolling */
 }
 
-/* Grid styles */
-.grid {
-    display: grid;
-    grid-template-columns: 20px repeat(20, 20px); /* 1 header column + 20 data columns */
-    grid-template-rows: 20px repeat(20, 20px); /* 1 header row + 20 data rows */
-    width: 420px; /* 21 columns * 20px = 420px */
-    height: 420px; /* 21 rows * 20px = 420px */
-    border: 1px solid #ccc; /* Add a border around the grid */
-}
-
-/* Header styles */
-.header {
-    background-color: #e0e0e0;
-    text-align: center;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px; /* Smaller font size for headers */
-}
-
-/* Cell styles */
-.cell {
-    background-color: #f0f0f0;
-    border: 1px solid #ccc; /* Add a border to each cell */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.cell a {
-    text-decoration: none;
-    color: #333;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Hover effect for cells */
-.cell:hover {
-    background-color: #d0d0d0; /* Light gray hover background */
-}
-
-.tabs-container {
-    flex: 1;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: auto; /* Add scroll if content overflows */
+/* Main Container with Responsive Layout */
+.main-container {
+    max-width: 900px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
+    gap: 10px;
 }
 
+/* Responsive Layout for Larger Screens */
+@media screen and (min-width: 768px) {
+    .main-container {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 20px;
+    }
+}
+
+/* Map Container Styling */
+.map-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    padding: 10px;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+/* Grid Layout */
+.grid {
+    display: grid;
+    grid-template-columns: auto repeat(20, 1fr);
+    background-color: #e0e0e0;
+    width: 100%;
+    max-width: 420px;
+}
+
+/* Grid Header Styling */
+.grid .header {
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2px;
+    font-size: 10px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Grid Cell Styling */
+.grid .cell {
+    background-color: #f0f0f0;
+    aspect-ratio: 1;
+    border: 1px solid #ccc;
+    position: relative;
+}
+
+/* Entity Count Badge */
+.grid .cell .entity-count {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0,0,0,0.7);
+    color: white;
+    font-size: 8px;
+    min-width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 1px;
+}
+
+/* Tabs Container */
+.tabs-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    padding: 10px;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+@media screen and (min-width: 768px) {
+    .tabs-container {
+        max-width: 460px;
+    }
+}
+
+/* Tabs Styling */
 .tabs {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
-.tablinks {
+.tabs button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 12px;
+}
+
+.tabs button.active {
     background-color: #007bff;
     color: white;
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-}
-
-.tablinks.active {
-    background-color: #0056b3;
-}
-
-.tablinks:hover {
-    background-color: #0056b3;
 }
 
 .tabcontent {
     display: none;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    flex: 1; /* Take up remaining space */
-    overflow: auto; /* Add scroll if content overflows */
 }
 
-.tabcontent h3 {
-    margin-top: 0;
-}
-
-/* Scans table styles */
-#scansTable {
+/* Table Styling */
+table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
-    border: 1px solid #ddd; /* Add border to the table */
+    margin-bottom: 10px;
 }
 
-#scansTable th, #scansTable td {
-    padding: 10px;
-    border: 1px solid #ddd; /* Add border to cells */
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 5px;
     text-align: left;
+    font-size: 10px;
 }
 
-#scansTable th {
-    background-color: #f8f9fa;
-    font-weight: bold;
+table th {
+    background-color: #f0f0f0;
+    cursor: pointer;
 }
 
-#scansTable tr:hover {
-    background-color: #f1f1f1;
-}
-
-/* Button styles */
+/* Button Container */
 .button-container {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    justify-content: space-between;
+    gap: 5px;
+    margin-top: 10px;
 }
 
-.custom-file-input, .reset-button {
-    background-color: #28a745;
+/* Button Styling */
+.custom-file-input, 
+.reset-button, 
+.view-button,
+.clear-filter-button {
+    flex: 1;
+    padding: 8px;
+    background-color: #007bff;
     color: white;
     border: none;
-    padding: 10px 20px;
-    cursor: pointer;
     border-radius: 4px;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 12px;
 }
 
-.reset-button {
-    background-color: #dc3545;
-}
-
-.custom-file-input:hover, .reset-button:hover {
-    opacity: 0.9;
-}
-
-/* Notification styles */
+/* Notification Styling */
 #notificationContainer {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1000;
+    margin-top: 10px;
 }
 
 .notification {
-    padding: 10px 20px;
-    margin-bottom: 10px;
+    padding: 8px;
+    margin-bottom: 8px;
     border-radius: 4px;
-    color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.notification.success {
-    background-color: #28a745;
+    font-size: 12px;
 }
 
 .notification.error {
-    background-color: #dc3545;
+    background-color: #f8d7da;
+    color: #721c24;
 }
 
 .notification button {
     background: none;
     border: none;
-    color: white;
-    cursor: pointer;
     font-size: 16px;
-}
-
-/* Group styling */
-.party-group {
-    border-top: 3px solid #000; /* Thick border for group separation */
-    background-color: #f0f0f0; /* Default background for group header */
-    font-weight: bold; /* Make the group header text bold */
-}
-
-/* Row coloring based on IFF status */
-.friend {
-    background-color: #d4edda; /* Light green for friends */
-}
-
-.friend-leader {
-    background-color: #c3e6cb; /* Slightly darker green for party leader */
-    font-weight: bold; /* Make the party leader text bold */
-}
-
-.enemy {
-    background-color: #f8d7da; /* Light red for enemies */
-}
-
-.enemy-leader {
-    background-color: #f5c6cb; /* Slightly darker red for party leader */
-    font-weight: bold; /* Make the party leader text bold */
-}
-
-.neutral {
-    background-color: #e2d3f5; /* Light purple for neutral */
-}
-
-.neutral-leader {
-    background-color: #d1bcf0; /* Slightly darker purple for party leader */
-    font-weight: bold; /* Make the party leader text bold */
-}
-
-/* Table styles for Scanned Objects */
-#ScannedObjects table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-    border: 1px solid #ddd; /* Add border to the table */
-}
-
-#ScannedObjects th, #ScannedObjects td {
-    padding: 10px;
-    border: 1px solid #ddd; /* Add border to cells */
-    text-align: left;
-}
-
-#ScannedObjects th {
-    background-color: #f8f9fa;
-    font-weight: bold;
-}
-
-#ScannedObjects tr:hover {
-    background-color: #f1f1f1;
-}
-
-/* Image styles */
-img {
-    max-width: 50px;
-    max-height: 50px;
-    border-radius: 4px;
-}
-
-/* Add this to your existing CSS file */
-.clear-filter-button {
-    display: block;
-    margin: 10px auto; /* Center the button horizontally */
-    padding: 8px 16px;
-    background-color: #007bff; /* Blue background */
-    color: white; /* White text */
-    border: none;
-    border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
 }
 
-.clear-filter-button:hover {
-    background-color: #0056b3; /* Darker blue on hover */
-}
+/* Grid Cell Color Coding */
+.grid .cell.enemy-only { background-color: #e0a8a8; }
+.grid .cell.friend-only { background-color: #a8e0a8; }
+.grid .cell.neutral-only { background-color: #a8e0ff; }
+.grid .cell.mixed { background-color: #ffd580; }
 
-/* Grid cell colors for different IFF combinations */
-.grid .cell-friends {
-    background-color: #90EE90; /* Light green */
-}
-
-.grid .cell-enemies {
-    background-color: #FFB6C6; /* Light red */
-}
-
-.grid .cell-neutral {
-    background-color: #DDA0DD; /* Light purple */
-}
-
-.grid .cell-mixed {
-    background-color: #FFA500; /* Orange */
-}
-
-/* Add transition for smooth color changes */
-.grid .cell {
-    transition: background-color 0.3s ease;
-}
+/* Row Status Highlighting */
+.friend { background-color: #d4f0d4; }
+.friend-leader { background-color: #a8e0a8; }
+.enemy { background-color:  #f0d4d4; }
+.enemy-leader { background-color: #e0a8a8; }
+.neutral { background-color: #d4f0ff; }
+.neutral-leader { background-color: #a8e0ff; }
