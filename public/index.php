@@ -298,6 +298,146 @@ function fetchScannedObjects(scanID, coords) {
         });
 }
 
+function updateScannedObjectsTable(scannedObjects) {
+    // First, clear all grid colors
+    clearGridColors();
+    
+    const scannedObjectsTab = document.getElementById('ScannedObjects');
+    if (!scannedObjectsTab) return;
+
+    // Create grid status map and object tracking
+    const gridStatus = {};
+    const gridObjects = {};
+    
+    // First pass: Collect all IFF statuses and objects for each coordinate
+    scannedObjects.forEach(obj => {
+        if (obj.iffStatus) {  // Only process objects with IFF status
+            const key = `${obj.x},${obj.y}`;
+            if (!gridStatus[key]) {
+                gridStatus[key] = new Set();
+                gridObjects[key] = [];
+            }
+            gridStatus[key].add(obj.iffStatus);
+            gridObjects[key].push(obj);
+        }
+    });
+
+    // Second pass: Color each cell based on collected statuses
+    for (const [coords, statuses] of Object.entries(gridStatus)) {
+        const [x, y] = coords.split(',').map(Number);
+        colorGridCell(x, y, Array.from(statuses), gridObjects[coords]);
+    }
+
+    // Update table structure
+    scannedObjectsTab.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Entity ID</th>
+                    <th>Name</th>
+                    <th>Type Name</th>
+                    <th>Owner Name</th>
+                    <th>IFF Status</th>
+                    <th>X</th>
+                    <th>Y</th>
+                    <th>Travel Direction</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    `;
+
+    const tableBody = scannedObjectsTab.querySelector('tbody');
+
+    // Group objects by party
+    const groupedObjects = {};
+    scannedObjects.forEach(obj => {
+        const key = obj.partyLeaderUID || obj.entityUID;
+        if (!groupedObjects[key]) groupedObjects[key] = [];
+        groupedObjects[key].push(obj);
+    });
+
+    // Create unique IDs for each squad
+    let squadCounter = 0;
+
+    // Populate table with groups
+    Object.values(groupedObjects).forEach(group => {
+        squadCounter++;
+        const squadId = `squad-${squadCounter}`;
+        const partyLeaderUID = group[0].partyLeaderUID || group[0].entityUID;
+        
+        // Sort group to ensure party leader is first
+        group.sort((a, b) => {
+            if (a.entityUID === partyLeaderUID) return -1;
+            if (b.entityUID === partyLeaderUID) return 1;
+            return 0;
+        });
+
+        const partyLeader = group[0];
+        const shipCount = group.length;
+
+        // Add squad header
+        const headerRow = document.createElement('tr');
+        headerRow.className = `party-group ${getIffStatusClass(partyLeader.iffStatus, true)}`;
+        // When creating the header row, change the span content to use an image
+        headerRow.innerHTML = `
+            <td colspan="9">
+                <span class="squad-toggle" data-target="${squadId}" data-state="collapsed">
+                    <img src="/assets/images/plus.png" alt="Expand" class="toggle-icon">
+                </span>
+                <strong>Squad: ${shipCount} Ship${shipCount !== 1 ? 's' : ''}</strong>
+            </td>
+        `;
+        tableBody.appendChild(headerRow);
+
+        // Add all squad members (leader and others)
+        group.forEach((obj, index) => {
+            const isLeader = index === 0;
+            const row = document.createElement('tr');
+            row.className = getIffStatusClass(obj.iffStatus, isLeader);
+            if (!isLeader) {
+                row.classList.add(squadId);
+                row.style.display = 'none'; // Hide non-leader rows initially
+            }
+            row.innerHTML = `
+                <td><img src="${obj.image}" alt="${obj.name}" style="max-width: 50px;"></td>
+                <td>${obj.entityUID}</td>
+                <td>${obj.name}</td>
+                <td>${obj.typeName}</td>
+                <td>${obj.ownerName}</td>
+                <td>${obj.iffStatus}</td>
+                <td>${obj.x}</td>
+                <td>${obj.y}</td>
+                <td>${obj.travelDirection}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    });
+
+    // In the click handler section of updateScannedObjectsTable
+    document.querySelectorAll('.squad-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const targetRows = document.querySelectorAll(`.${targetId}`);
+            const currentState = this.getAttribute('data-state');
+            const toggleIcon = this.querySelector('.toggle-icon');
+            
+            if (currentState === 'collapsed') {
+                targetRows.forEach(row => row.style.display = '');
+                toggleIcon.src = '/assets/images/minus.png';
+                toggleIcon.alt = 'Collapse';
+                this.setAttribute('data-state', 'expanded');
+            } else {
+                targetRows.forEach(row => row.style.display = 'none');
+                toggleIcon.src = '/assets/images/plus.png';
+                toggleIcon.alt = 'Expand';
+                this.setAttribute('data-state', 'collapsed');
+            }
+        });
+    });
+}
+
 // Add a helper function to count non-wreck entities
 function countNonWreckEntities(objects) {
     return objects.filter(obj => 
@@ -348,7 +488,7 @@ function colorGridCell(x, y, statuses, objectsInCell) {
                 cell.classList.add('friend-only');
                 break;
             case 'Neutral':
-                cell.style.backgroundColor = '#e2d3f5';
+                cell.style.backgroundColor = '#c095e7';
                 cell.classList.add('neutral-only');
                 break;
         }
@@ -374,106 +514,6 @@ function colorGridCell(x, y, statuses, objectsInCell) {
         
         cell.appendChild(countSpan);
     }
-}
-
-function updateScannedObjectsTable(scannedObjects) {
-    // First, clear all grid colors
-    clearGridColors();
-    
-    const scannedObjectsTab = document.getElementById('ScannedObjects');
-    if (!scannedObjectsTab) return;
-
-    // Create grid status map and object tracking
-    const gridStatus = {};
-    const gridObjects = {};
-    
-    // First pass: Collect all IFF statuses and objects for each coordinate
-    scannedObjects.forEach(obj => {
-        if (obj.iffStatus) {  // Only process objects with IFF status
-            const key = `${obj.x},${obj.y}`;
-            if (!gridStatus[key]) {
-                gridStatus[key] = new Set();
-                gridObjects[key] = [];
-            }
-            gridStatus[key].add(obj.iffStatus);
-            gridObjects[key].push(obj);
-        }
-    });
-
-    // Second pass: Color each cell based on collected statuses
-    for (const [coords, statuses] of Object.entries(gridStatus)) {
-        const [x, y] = coords.split(',').map(Number);
-        colorGridCell(x, y, Array.from(statuses), gridObjects[coords]);
-    }
-
-    // Rest of the function remains the same...
-    scannedObjectsTab.innerHTML = `
-        <table>
-            <thead>
-                <tr>
-                    <th>Image</th>
-                    <th>Entity ID</th>
-                    <th>Name</th>
-                    <th>Type Name</th>
-                    <th>Owner Name</th>
-                    <th>IFF Status</th>
-                    <th>X</th>
-                    <th>Y</th>
-                    <th>Travel Direction</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    `;
-
-    const tableBody = scannedObjectsTab.querySelector('tbody');
-
-    // Group objects by party
-    const groupedObjects = {};
-    scannedObjects.forEach(obj => {
-        const key = obj.partyLeaderUID || obj.entityUID;
-        if (!groupedObjects[key]) groupedObjects[key] = [];
-        groupedObjects[key].push(obj);
-    });
-
-    // Populate table with groups
-    Object.values(groupedObjects).forEach(group => {
-        const partyLeaderUID = group[0].partyLeaderUID || group[0].entityUID;
-        
-        // Sort group to ensure party leader is first
-        group.sort((a, b) => {
-            if (a.entityUID === partyLeaderUID) return -1;
-            if (b.entityUID === partyLeaderUID) return 1;
-            return 0;
-        });
-
-        const partyLeader = group[0];
-
-        // Add party header
-        const headerRow = document.createElement('tr');
-        headerRow.className = `party-group ${getIffStatusClass(partyLeader.iffStatus, true)}`;
-        headerRow.innerHTML = `<td colspan="9"><strong>Squad</strong></td>`;
-        tableBody.appendChild(headerRow);
-
-        // Add party members
-        group.forEach(obj => {
-            const isLeader = obj.entityUID === partyLeaderUID;
-            const row = document.createElement('tr');
-            row.className = getIffStatusClass(obj.iffStatus, isLeader);
-            row.innerHTML = `
-                <td><img src="${obj.image}" alt="${obj.name}" style="max-width: 50px;"></td>
-                <td>${obj.entityUID}</td>
-                <td>${obj.name}</td>
-                <td>${obj.typeName}</td>
-                <td>${obj.ownerName}</td>
-                <td>${obj.iffStatus}</td>
-                <td>${obj.x}</td>
-                <td>${obj.y}</td>
-                <td>${obj.travelDirection}</td>
-            `;
-            tableBody.appendChild(row);
-        });
-    });
 }
 
 // Function to get IFF status class

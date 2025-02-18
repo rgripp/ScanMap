@@ -229,7 +229,7 @@ table th {
 /* Grid Cell Color Coding */
 .grid .cell.enemy-only { background-color: #e0a8a8; }
 .grid .cell.friend-only { background-color: #a8e0a8; }
-.grid .cell.neutral-only { background-color: #c095e7; }
+.grid .cell.neutral-only { background-color: #a8e0ff; }
 .grid .cell.mixed { background-color: #ffd580; }
 
 /* Row Status Highlighting */
@@ -237,8 +237,8 @@ table th {
 .friend-leader { background-color: #a8e0a8; }
 .enemy { background-color: #f0d4d4; }
 .enemy-leader { background-color: #e0a8a8; }
-.neutral { background-color: #e2d3f5; }
-.neutral-leader { background-color: #c095e7; }
+.neutral { background-color: #d4f0ff; }
+.neutral-leader { background-color: #a8e0ff; }
 
 .scan-location-header {
     width: 100%;
