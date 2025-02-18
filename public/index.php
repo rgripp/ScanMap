@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch scans data
 $scans = [];
-$stmt = $pdo->query("SELECT id, characterName, years, days, hours, minutes, seconds FROM scans ORDER BY id DESC");
+$stmt = $pdo->query("SELECT id, characterName, galX, galY, years, days, hours, minutes, seconds FROM scans ORDER BY id DESC");
 if ($stmt) {
     $scans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -78,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetchScannedObjects']))
 <body>
     <!-- Map Container -->
     <div class="map-container">
+        <h3 id="scanLocationHeader" class="scan-location-header">Scan Location: None Selected</h3>
         <div class="grid">
             <!-- Top row: Column headers (0 to 19) -->
             <div class="header"></div> <!-- Empty top-left corner -->
@@ -111,19 +112,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetchScannedObjects']))
         </div>
 
         <div id="Scans" class="tabcontent">
-            <table id="scansTable">
-                <thead>
-                    <tr>
-                        <th onclick="sortTable(0)">Scan ID</th>
-                        <th>Made By</th>
-                        <th onclick="sortTable(2)">Time</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Rows will be inserted here dynamically -->
-                </tbody>
-            </table>
+        <table id="scansTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">ID</th>
+                    <th>Sys Coords</th>
+                    <th>Made By</th>
+                    <th onclick="sortTable(3)">Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be inserted here dynamically -->
+            </tbody>
+        </table>
             <div class="button-container">
                 <!-- Combined Load/Upload Button -->
                 <div class="file-input-wrapper">
@@ -248,9 +250,11 @@ function updateScansTable(scans) {
     tableBody.innerHTML = ''; // Clear existing rows
 
     scans.forEach(scan => {
+        const coords = `${scan.galX || 0}, ${scan.galY || 0}`;
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>Scan ${scan.id}</td>
+            <td>${scan.id}</td>
+            <td>${coords}</td>
             <td>${scan.characterName}</td>
             <td>
                 Year ${scan.years}, Day ${scan.days}, 
@@ -258,7 +262,11 @@ function updateScansTable(scans) {
                 ${String(scan.minutes).padStart(2, '0')}:
                 ${String(scan.seconds).padStart(2, '0')}
             </td>
-            <td><button class="view-button" onclick="fetchScannedObjects(${scan.id})">View</button></td>
+            <td>
+                <button class="view-button" 
+                        onclick="fetchScannedObjects(${scan.id}, '${coords}')"
+                >View</button>
+            </td>
         `;
         tableBody.appendChild(row);
     });
@@ -272,8 +280,7 @@ function clearScannedObjectsTable() {
     }
 }
 
-// Function to fetch scanned objects for a specific scanID
-function fetchScannedObjects(scanID) {
+function fetchScannedObjects(scanID, coords) {
     fetch(`?fetchScannedObjects=true&scanID=${scanID}`)
         .then(response => {
             if (!response.ok) {
@@ -283,6 +290,7 @@ function fetchScannedObjects(scanID) {
         })
         .then(data => {
             updateScannedObjectsTable(data);
+            document.getElementById('scanLocationHeader').textContent = `Scan for ${coords}`;
             openTab(null, 'ScannedObjects');
         })
         .catch(error => {

@@ -239,3 +239,14 @@ table th {
 .enemy-leader { background-color: #e0a8a8; }
 .neutral { background-color: #d4f0ff; }
 .neutral-leader { background-color: #a8e0ff; }
+
+.scan-location-header {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 10px;
+    padding: 5px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+}

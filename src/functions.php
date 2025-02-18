@@ -177,6 +177,6 @@ function getScans($pdo) {
 }
 
 function fetchScans($pdo) {
-    $stmt = $pdo->query("SELECT id, characterName, years, days, hours, minutes, seconds FROM scans ORDER BY id DESC");
+    $stmt = $pdo->query("SELECT id, characterName, galX, galY, years, days, hours, minutes, seconds FROM scans ORDER BY id DESC");
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
