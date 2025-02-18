@@ -456,7 +456,7 @@ function clearGridColors() {
         // Remove all possible status classes
         cell.classList.remove('enemy-only', 'friend-only', 'neutral-only', 'mixed');
         // Reset to default background
-        cell.style.backgroundColor = '#f0f0f0';
+        cell.style.backgroundColor = '#333';
         
         // Clear any existing count
         const existingCount = cell.querySelector('.entity-count');
@@ -585,7 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cells = document.querySelectorAll('.grid .cell');
     cells.forEach(cell => {
         // Test that we can color each cell
-        cell.style.backgroundColor = '#f0f0f0';
+        cell.style.backgroundColor = '#333';
     });
     // Fetch initial scans data
     fetchScansData();
