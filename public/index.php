@@ -303,10 +303,18 @@ const TableController = {
         const summaryHtml = this.createShipCountSummary(scannedObjects);
         UIController.elements.scannedObjectsTab.innerHTML = summaryHtml;
         
-        // Add search box
+        // Add search box with fold/unfold controls
         UIController.elements.scannedObjectsTab.innerHTML += `
             <div class="search-container">
-                <input type="text" id="shipSearch" class="ship-search" placeholder="Search ships by name, type, owner or ID...">
+                <div class="search-controls">
+                    <button class="fold-button" onclick="TableController.foldAllSquads()">
+                        <img src="/assets/images/minus.png" alt="Fold All">
+                    </button>
+                    <button class="fold-button" onclick="TableController.unfoldAllSquads()">
+                        <img src="/assets/images/plus.png" alt="Unfold All">
+                    </button>
+                    <input type="text" id="shipSearch" class="ship-search" placeholder="Search ships by name, type, owner or ID...">
+                </div>
             </div>`;
         
         const gridStatus = {};
@@ -372,34 +380,42 @@ const TableController = {
 
         return `
             <div class="ship-count-summary">
-                Enemy Ships: <span class="enemy-count">${enemyCount}</span> | 
-                Friendly Ships: <span class="friend-count">${friendCount}</span> | 
-                Neutral Ships: <span class="neutral-count">${neutralCount}</span> | 
-                Wrecks: <span class="wreck-count">${wreckCount}</span>
+                <span class="count-filter" onclick="TableController.filterByStatus('Enemy')">
+                    Enemy Ships: <span class="enemy-count">${enemyCount}</span>
+                </span> | 
+                <span class="count-filter" onclick="TableController.filterByStatus('Friend')">
+                    Friendly Ships: <span class="friend-count">${friendCount}</span>
+                </span> | 
+                <span class="count-filter" onclick="TableController.filterByStatus('Neutral')">
+                    Neutral Ships: <span class="neutral-count">${neutralCount}</span>
+                </span> | 
+                <span class="count-filter" onclick="TableController.filterByStatus('Wreck')">
+                    Wrecks: <span class="wreck-count">${wreckCount}</span>
+                </span>
             </div>
         `;
     },
 
     createTableHeader() {
-        return `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Image</th>
-                        <th>Entity ID</th>
-                        <th>Name</th>
-                        <th>Type Name</th>
-                        <th>Owner Name</th>
-                        <th>IFF Status</th>
-                        <th>X</th>
-                        <th>Y</th>
-                        <th>Travel Direction</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        `;
-    },
+    return `
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Owner</th>
+                    <th>X</th>
+                    <th>Y</th>
+                    <th>Travel Direction</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    `;
+},
 
     groupObjectsByParty(objects) {
         const groups = {};
@@ -425,41 +441,53 @@ const TableController = {
     },
 
     createSquadHeader(group, squadId) {
-        const headerRow = document.createElement('tr');
-        headerRow.className = `party-group ${this.getIffStatusClass(group[0].iffStatus, true)}`;
-        headerRow.innerHTML = `
-            <td colspan="9">
-                <span class="squad-toggle" data-target="${squadId}" data-state="collapsed">
-                    <img src="/assets/images/plus.png" alt="Expand" class="toggle-icon">
-                </span>
-                <strong>Squad: ${group.length} Ship${group.length !== 1 ? 's' : ''}</strong>
-            </td>
-        `;
-        return headerRow;
-    },
+    const headerRow = document.createElement('tr');
+    headerRow.className = `party-group ${this.getIffStatusClass(group[0].iffStatus, true)}`;
+    
+    const toggleHtml = group.length > 1 ? 
+        `<span class="squad-toggle" data-target="${squadId}" data-state="collapsed">
+            <img src="/assets/images/plus.png" alt="Expand" class="toggle-icon">
+        </span>` : '';
+    
+    headerRow.innerHTML = `
+        <td colspan="9">
+            ${toggleHtml}
+            <strong>Squad: ${group.length} Ship${group.length !== 1 ? 's' : ''}</strong>
+        </td>
+    `;
+    return headerRow;
+},
 
-    createSquadMemberRow(obj, isLeader, squadId) {
-        const row = document.createElement('tr');
-        row.className = this.getIffStatusClass(obj.iffStatus, isLeader);
-        
-        if (!isLeader) {
-            row.classList.add(squadId);
-            row.classList.add('hidden');
-        }
-        
-        row.innerHTML = `
-            <td><img src="${obj.image}" alt="${obj.name}"></td>
-            <td>${obj.entityUID}</td>
-            <td>${obj.name}</td>
-            <td>${obj.typeName}</td>
-            <td>${obj.ownerName}</td>
-            <td>${obj.iffStatus}</td>
-            <td>${obj.x}</td>
-            <td>${obj.y}</td>
-            <td>${obj.travelDirection}</td>
-        `;
-        return row;
-    },
+createSquadMemberRow(obj, isLeader, squadId) {
+    const row = document.createElement('tr');
+    row.className = this.getIffStatusClass(obj.iffStatus, isLeader);
+    
+    if (!isLeader) {
+        row.classList.add(squadId);
+        row.classList.add('hidden');
+    }
+
+    // Extract ID number after colon
+    const entityId = obj.entityUID;
+    const idNumber = entityId.split(':')[1] || entityId;
+    
+    row.innerHTML = `
+        <td><img src="${obj.image}" alt="${obj.name}"></td>
+        <td>${obj.entityUID}</td>
+        <td>${obj.name}</td>
+        <td>${obj.typeName}</td>
+        <td>${obj.ownerName}</td>
+        <td>${obj.x}</td>
+        <td>${obj.y}</td>
+        <td>${obj.travelDirection}</td>
+        <td>
+            <button class="copy-button" onclick="TableController.copyToClipboard('${idNumber}')">
+                <img src="/assets/images/copy.png" alt="Copy ID" width="16" height="16">
+            </button>
+        </td>
+    `;
+    return row;
+},
 
     setupSquadToggles() {
         document.querySelectorAll('.squad-toggle').forEach(toggle => {
@@ -536,15 +564,6 @@ const TableController = {
                 const squadId = row.querySelector('.squad-toggle')?.dataset.target;
                 if (squadId && squadsWithVisibleMembers.has(squadId)) {
                     row.classList.remove('hidden');
-                    // Expand the squad if there's a search
-                    if (searchText) {
-                        const toggleIcon = row.querySelector('.toggle-icon');
-                        if (toggleIcon) {
-                            toggleIcon.src = '/assets/images/minus.png';
-                            toggleIcon.alt = 'Collapse';
-                            row.querySelector('.squad-toggle').dataset.state = 'expanded';
-                        }
-                    }
                 } else {
                     row.classList.add('hidden');
                 }
@@ -563,7 +582,9 @@ const TableController = {
                     visibleObjects.push({
                         typeName: row.cells[3].textContent,
                         name: row.cells[2].textContent,
-                        iffStatus: row.cells[5].textContent
+                        iffStatus: row.className.includes('friend') ? 'Friend' :
+                                 row.className.includes('enemy') ? 'Enemy' :
+                                 row.className.includes('neutral') ? 'Neutral' : ''
                     });
                 } else {
                     row.classList.add('hidden');
@@ -578,116 +599,215 @@ const TableController = {
         }
     },
 
-    getIffStatusClass(iffStatus, isLeader = false) {
-        if (!iffStatus) return '';
-        const statusMap = {
-            Friend: isLeader ? 'friend-leader' : 'friend',
-            Enemy: isLeader ? 'enemy-leader' : 'enemy',
-            Neutral: isLeader ? 'neutral-leader' : 'neutral'
-        };
-        return statusMap[iffStatus] || '';
-    },
-
-    filterScannedObjectsByCoordinates(x, y) {
-        const table = UIController.elements.scannedObjectsTab.querySelector('table');
-        if (!table) return;
-
-        // Clear any previous cell highlighting
-        document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
-            cell.classList.remove('highlighted');
-        });
-
-        // Highlight the selected cell
-        const selectedCell = document.querySelector(`.grid .cell[data-x="${x}"][data-y="${y}"]`);
-        if (selectedCell) {
-            selectedCell.classList.add('highlighted');
-        }
-
-        const filteredObjects = [];
-        const rows = table.querySelectorAll('tbody tr');
-        let currentPartyHeader = null;
-        let hasVisibleMembersInParty = false;
-
-        rows.forEach(row => {
-            if (row.classList.contains('party-group')) {
-                currentPartyHeader = row;
-                hasVisibleMembersInParty = false;
-                currentPartyHeader.classList.add('hidden');
-            } else if (currentPartyHeader) {
-                const rowX = parseInt(row.cells[6].textContent, 10);
-                const rowY = parseInt(row.cells[7].textContent, 10);
-                const isVisible = rowX === x && rowY === y;
-
-                if (isVisible) {
-                    row.classList.remove('hidden');
-                    hasVisibleMembersInParty = true;
-                    // Add to filtered objects for counting
-                    filteredObjects.push({
-                        typeName: row.cells[3].textContent,
-                        name: row.cells[2].textContent,
-                        iffStatus: row.cells[5].textContent
-                    });
-                } else {
-                    row.classList.add('hidden');
-                }
-
-                if (hasVisibleMembersInParty) {
-                    currentPartyHeader.classList.remove('hidden');
-                }
-            }
-        });
-
-        // Update summary counts with filtered objects
-        const summaryDiv = document.querySelector('.ship-count-summary');
-        if (summaryDiv) {
-            summaryDiv.innerHTML = this.createShipCountSummary(filteredObjects);
-        }
-    },
-
-    clearFilter() {
-        const searchInput = document.getElementById('shipSearch');
-        if (searchInput) {
-            searchInput.value = '';
-        }
+    foldAllSquads() {
+    const toggles = document.querySelectorAll('.squad-toggle');
+    toggles.forEach(toggle => {
+        const targetId = toggle.dataset.target;
+        const targetRows = document.querySelectorAll(`.${targetId}`);
+        const headerRow = toggle.closest('tr');
         
-        const table = UIController.elements.scannedObjectsTab.querySelector('table');
-        if (!table) return;
-
-        // Clear cell highlighting
-        document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
-            cell.classList.remove('highlighted');
-        });
-
-        // Reset squad toggles to collapsed state
-        document.querySelectorAll('.squad-toggle').forEach(toggle => {
+        // Only fold if the header row is visible
+        if (!headerRow.classList.contains('hidden')) {
+            targetRows.forEach(row => {
+                row.classList.add('hidden');
+            });
             const toggleIcon = toggle.querySelector('.toggle-icon');
             toggleIcon.src = '/assets/images/plus.png';
             toggleIcon.alt = 'Expand';
             toggle.dataset.state = 'collapsed';
-        });
-
-        // Show all rows
-        table.querySelectorAll('tbody tr').forEach(row => {
-            if (!row.classList.contains('party-group') && row.classList.contains(row.classList[0])) {
-                row.classList.add('hidden');
-            } else {
-                row.classList.remove('hidden');
-            }
-        });
-
-        // Reset summary counts to show all objects
-        const rows = table.querySelectorAll('tbody tr:not(.party-group)');
-        const allObjects = Array.from(rows).map(row => ({
-            typeName: row.cells[3].textContent,
-            name: row.cells[2].textContent,
-            iffStatus: row.cells[5].textContent
-        }));
-
-        const summaryDiv = document.querySelector('.ship-count-summary');
-        if (summaryDiv) {
-            summaryDiv.innerHTML = this.createShipCountSummary(allObjects);
         }
-    },
+    });
+},
+
+unfoldAllSquads() {
+    const toggles = document.querySelectorAll('.squad-toggle');
+    toggles.forEach(toggle => {
+        const targetId = toggle.dataset.target;
+        const targetRows = document.querySelectorAll(`.${targetId}`);
+        const headerRow = toggle.closest('tr');
+        
+        // Only unfold if the header row is visible
+        if (!headerRow.classList.contains('hidden')) {
+            targetRows.forEach(row => {
+                // Only show if not filtered out
+                if (row.dataset.filteredOut !== 'true') {
+                    row.classList.remove('hidden');
+                }
+            });
+            const toggleIcon = toggle.querySelector('.toggle-icon');
+            toggleIcon.src = '/assets/images/minus.png';
+            toggleIcon.alt = 'Collapse';
+            toggle.dataset.state = 'expanded';
+        }
+    });
+},
+
+filterByStatus(status) {
+    const table = UIController.elements.scannedObjectsTab.querySelector('table');
+    if (!table) return;
+
+    const searchInput = document.getElementById('shipSearch');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    const rows = table.querySelectorAll('tbody tr');
+    let currentPartyHeader = null;
+    let hasVisibleMembersInParty = false;
+
+    rows.forEach(row => {
+        if (row.classList.contains('party-group')) {
+            currentPartyHeader = row;
+            hasVisibleMembersInParty = false;
+            currentPartyHeader.classList.add('hidden');
+        } else if (currentPartyHeader) {
+            const typeName = row.cells[3].textContent.toLowerCase();
+            const isWreck = status === 'Wreck' ? 
+                (typeName.includes('wreck') || typeName.includes('debris')) :
+                !typeName.includes('wreck') && !typeName.includes('debris');
+            
+            const iffStatus = row.className.includes('friend') ? 'Friend' :
+                            row.className.includes('enemy') ? 'Enemy' :
+                            row.className.includes('neutral') ? 'Neutral' : '';
+            
+            const isVisible = status === 'Wreck' ? isWreck : (iffStatus === status && isWreck);
+
+            if (isVisible) {
+                row.classList.remove('hidden');
+                row.dataset.filteredOut = false;
+                hasVisibleMembersInParty = true;
+            } else {
+                row.classList.add('hidden');
+                row.dataset.filteredOut = true;
+            }
+
+            if (hasVisibleMembersInParty) {
+                currentPartyHeader.classList.remove('hidden');
+                currentPartyHeader.dataset.filteredOut = false;
+            } else {
+                currentPartyHeader.dataset.filteredOut = true;
+            }
+        }
+    });
+
+    // Make sure all squads are folded after filtering
+    this.foldAllSquads();
+},
+
+filterScannedObjectsByCoordinates(x, y) {
+    const table = UIController.elements.scannedObjectsTab.querySelector('table');
+    if (!table) return;
+
+    // Clear any previous cell highlighting
+    document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
+        cell.classList.remove('highlighted');
+    });
+
+    // Highlight the selected cell
+    const selectedCell = document.querySelector(`.grid .cell[data-x="${x}"][data-y="${y}"]`);
+    if (selectedCell) {
+        selectedCell.classList.add('highlighted');
+    }
+
+    const filteredObjects = [];
+    const rows = table.querySelectorAll('tbody tr');
+    let currentPartyHeader = null;
+    let hasVisibleMembersInParty = false;
+
+    rows.forEach(row => {
+        if (row.classList.contains('party-group')) {
+            currentPartyHeader = row;
+            hasVisibleMembersInParty = false;
+            currentPartyHeader.classList.add('hidden');
+        } else if (currentPartyHeader) {
+            const rowX = parseInt(row.cells[5].textContent, 10);
+            const rowY = parseInt(row.cells[6].textContent, 10);
+            const isVisible = rowX === x && rowY === y;
+
+            if (isVisible) {
+                row.classList.remove('hidden');
+                row.dataset.filteredOut = false;
+                hasVisibleMembersInParty = true;
+                filteredObjects.push({
+                    typeName: row.cells[3].textContent,
+                    name: row.cells[2].textContent,
+                    iffStatus: row.className.includes('friend') ? 'Friend' :
+                             row.className.includes('enemy') ? 'Enemy' :
+                             row.className.includes('neutral') ? 'Neutral' : ''
+                });
+            } else {
+                row.classList.add('hidden');
+                row.dataset.filteredOut = true;
+            }
+
+            if (hasVisibleMembersInParty) {
+                currentPartyHeader.classList.remove('hidden');
+                currentPartyHeader.dataset.filteredOut = false;
+            } else {
+                currentPartyHeader.dataset.filteredOut = true;
+            }
+        }
+    });
+
+    // Update summary counts with filtered objects
+    const summaryDiv = document.querySelector('.ship-count-summary');
+    if (summaryDiv) {
+        summaryDiv.innerHTML = this.createShipCountSummary(filteredObjects);
+    }
+
+    // Make sure all squads are folded after filtering
+    this.foldAllSquads();
+},
+
+    clearFilter() {
+    const searchInput = document.getElementById('shipSearch');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
+    const table = UIController.elements.scannedObjectsTab.querySelector('table');
+    if (!table) return;
+
+    // Clear cell highlighting
+    document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
+        cell.classList.remove('highlighted');
+    });
+
+    // Show all rows and reset squad toggles
+    table.querySelectorAll('tbody tr').forEach(row => {
+        row.classList.remove('hidden');
+        row.dataset.filteredOut = false;
+        
+        if (!row.classList.contains('party-group') && 
+            Array.from(row.classList).some(cls => cls.startsWith('squad-'))) {
+            row.classList.add('hidden');
+        }
+        
+        if (row.classList.contains('party-group')) {
+            const toggleIcon = row.querySelector('.toggle-icon');
+            if (toggleIcon) {
+                toggleIcon.src = '/assets/images/plus.png';
+                toggleIcon.alt = 'Expand';
+                row.querySelector('.squad-toggle').dataset.state = 'collapsed';
+            }
+        }
+    });
+
+    // Get all rows for summary update
+    const rows = table.querySelectorAll('tbody tr:not(.party-group)');
+    const allObjects = Array.from(rows).map(row => ({
+        typeName: row.cells[3].textContent,
+        name: row.cells[2].textContent,
+        iffStatus: row.className.includes('friend') ? 'Friend' :
+                  row.className.includes('enemy') ? 'Enemy' :
+                  row.className.includes('neutral') ? 'Neutral' : ''
+    }));
+
+    const summaryDiv = document.querySelector('.ship-count-summary');
+    if (summaryDiv) {
+        summaryDiv.innerHTML = this.createShipCountSummary(allObjects);
+    }
+},
 
     sortTable(n) {
         const rows = Array.from(UIController.elements.scansTable.rows).slice(1);
@@ -708,26 +828,30 @@ const TableController = {
         UIController.elements.scannedObjectsTab.innerHTML = '';
     },
 
-    filterObjectsByXY(x, y) {
-        return function(obj) {
-            return obj.x === x && obj.y === y;
+    getIffStatusClass(iffStatus, isLeader = false) {
+        if (!iffStatus) return '';
+        const statusMap = {
+            Friend: isLeader ? 'friend-leader' : 'friend',
+            Enemy: isLeader ? 'enemy-leader' : 'enemy',
+            Neutral: isLeader ? 'neutral-leader' : 'neutral'
         };
+        return statusMap[iffStatus] || '';
     },
-
-    countObjectTypes(objects) {
-        return objects.reduce((counts, obj) => {
-            const type = obj.iffStatus || 'Unknown';
-            counts[type] = (counts[type] || 0) + 1;
-            return counts;
-        }, {});
-    },
-
-    showErrorMessage(message) {
+    copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Optional: Add some visual feedback
         NotificationController.show({
-            message: `Error: ${message}`,
-            type: 'error'
+            message: "ID copied to clipboard",
+            type: "success"
         });
-    }
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        NotificationController.show({
+            message: "Failed to copy ID",
+            type: "error"
+        });
+    });
+}
 };
 
 // Data Controller
