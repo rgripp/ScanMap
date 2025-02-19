@@ -303,6 +303,12 @@ const TableController = {
         const summaryHtml = this.createShipCountSummary(scannedObjects);
         UIController.elements.scannedObjectsTab.innerHTML = summaryHtml;
         
+        // Add search box
+        UIController.elements.scannedObjectsTab.innerHTML += `
+            <div class="search-container">
+                <input type="text" id="shipSearch" class="ship-search" placeholder="Search ships by name, type, owner or ID...">
+            </div>`;
+        
         const gridStatus = {};
         const gridObjects = {};
         
@@ -337,37 +343,39 @@ const TableController = {
         });
 
         this.setupSquadToggles();
+        this.setupSearchHandler();
     },
 
     createShipCountSummary(objects) {
-        const counts = {
-            enemy: 0,
-            friend: 0,
-            neutral: 0,
-            wreck: 0
-        };
+        let enemyCount = 0;
+        let friendCount = 0;
+        let neutralCount = 0;
+        let wreckCount = 0;
 
         objects.forEach(obj => {
-            if (obj.typeName?.toLowerCase().includes('wreck') || 
-                obj.typeName?.toLowerCase().includes('debris') ||
-                obj.name?.toLowerCase().includes('wreck') ||
-                obj.name?.toLowerCase().includes('debris')) {
-                counts.wreck++;
+            const typeName = (obj.typeName || '').toLowerCase();
+            const name = (obj.name || '').toLowerCase();
+            
+            if (typeName.includes('wreck') || 
+                typeName.includes('debris') ||
+                name.includes('wreck') ||
+                name.includes('debris')) {
+                wreckCount++;
             } else if (obj.iffStatus === 'Enemy') {
-                counts.enemy++;
+                enemyCount++;
             } else if (obj.iffStatus === 'Friend') {
-                counts.friend++;
+                friendCount++;
             } else if (obj.iffStatus === 'Neutral') {
-                counts.neutral++;
+                neutralCount++;
             }
         });
 
         return `
             <div class="ship-count-summary">
-                Enemy Ships: <span class="enemy-count">${counts.enemy}</span> | 
-                Friendly Ships: <span class="friend-count">${counts.friend}</span> | 
-                Neutral Ships: <span class="neutral-count">${counts.neutral}</span> | 
-                Wrecks: <span class="wreck-count">${counts.wreck}</span>
+                Enemy Ships: <span class="enemy-count">${enemyCount}</span> | 
+                Friendly Ships: <span class="friend-count">${friendCount}</span> | 
+                Neutral Ships: <span class="neutral-count">${neutralCount}</span> | 
+                Wrecks: <span class="wreck-count">${wreckCount}</span>
             </div>
         `;
     },
@@ -477,6 +485,99 @@ const TableController = {
         });
     },
 
+    setupSearchHandler() {
+        const searchInput = document.getElementById('shipSearch');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', (e) => {
+            this.handleShipSearch(e.target.value.trim());
+        });
+    },
+
+    handleShipSearch(searchText) {
+        const table = UIController.elements.scannedObjectsTab.querySelector('table');
+        if (!table) return;
+
+        const searchTerms = searchText.toLowerCase().split(' ').filter(term => term.length > 0);
+        const rows = table.querySelectorAll('tbody tr');
+        
+        // Track visible objects for summary update
+        const visibleObjects = [];
+        
+        // Keep track of which squads have visible members
+        const squadsWithVisibleMembers = new Set();
+        
+        // First pass: check which squad members are visible
+        rows.forEach(row => {
+            if (!row.classList.contains('party-group')) {
+                const searchableContent = [
+                    row.cells[2].textContent, // name
+                    row.cells[3].textContent, // type name
+                    row.cells[4].textContent, // owner name
+                    row.cells[1].textContent  // entity ID
+                ].join(' ').toLowerCase();
+
+                const isMatch = searchText === '' || searchTerms.every(term => searchableContent.includes(term));
+
+                if (isMatch) {
+                    // Find which squad this row belongs to
+                    const squadClass = Array.from(row.classList).find(cls => cls.startsWith('squad-'));
+                    if (squadClass) {
+                        squadsWithVisibleMembers.add(squadClass);
+                    }
+                }
+            }
+        });
+
+        // Second pass: show/hide rows based on search and squad visibility
+        rows.forEach(row => {
+            if (row.classList.contains('party-group')) {
+                // Check if this squad header has any visible members
+                const squadId = row.querySelector('.squad-toggle')?.dataset.target;
+                if (squadId && squadsWithVisibleMembers.has(squadId)) {
+                    row.classList.remove('hidden');
+                    // Expand the squad if there's a search
+                    if (searchText) {
+                        const toggleIcon = row.querySelector('.toggle-icon');
+                        if (toggleIcon) {
+                            toggleIcon.src = '/assets/images/minus.png';
+                            toggleIcon.alt = 'Collapse';
+                            row.querySelector('.squad-toggle').dataset.state = 'expanded';
+                        }
+                    }
+                } else {
+                    row.classList.add('hidden');
+                }
+            } else {
+                const searchableContent = [
+                    row.cells[2].textContent, // name
+                    row.cells[3].textContent, // type name
+                    row.cells[4].textContent, // owner name
+                    row.cells[1].textContent  // entity ID
+                ].join(' ').toLowerCase();
+
+                const isMatch = searchText === '' || searchTerms.every(term => searchableContent.includes(term));
+
+                if (isMatch) {
+                    row.classList.remove('hidden');
+                    visibleObjects.push({
+                        typeName: row.cells[3].textContent,
+                        name: row.cells[2].textContent,
+                        iffStatus: row.cells[5].textContent
+                    });
+                } else {
+                    row.classList.add('hidden');
+                }
+            }
+        });
+
+        // Update summary counts with visible objects
+        const summaryDiv = document.querySelector('.ship-count-summary');
+        if (summaryDiv) {
+            summaryDiv.innerHTML = this.createShipCountSummary(visibleObjects);
+        }
+    },
+
     getIffStatusClass(iffStatus, isLeader = false) {
         if (!iffStatus) return '';
         const statusMap = {
@@ -536,7 +637,7 @@ const TableController = {
             }
         });
 
-        // Update the summary counts with filtered data
+        // Update summary counts with filtered objects
         const summaryDiv = document.querySelector('.ship-count-summary');
         if (summaryDiv) {
             summaryDiv.innerHTML = this.createShipCountSummary(filteredObjects);
@@ -544,6 +645,11 @@ const TableController = {
     },
 
     clearFilter() {
+        const searchInput = document.getElementById('shipSearch');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        
         const table = UIController.elements.scannedObjectsTab.querySelector('table');
         if (!table) return;
 
@@ -552,9 +658,21 @@ const TableController = {
             cell.classList.remove('highlighted');
         });
 
+        // Reset squad toggles to collapsed state
+        document.querySelectorAll('.squad-toggle').forEach(toggle => {
+            const toggleIcon = toggle.querySelector('.toggle-icon');
+            toggleIcon.src = '/assets/images/plus.png';
+            toggleIcon.alt = 'Expand';
+            toggle.dataset.state = 'collapsed';
+        });
+
         // Show all rows
         table.querySelectorAll('tbody tr').forEach(row => {
-            row.classList.remove('hidden');
+            if (!row.classList.contains('party-group') && row.classList.contains(row.classList[0])) {
+                row.classList.add('hidden');
+            } else {
+                row.classList.remove('hidden');
+            }
         });
 
         // Reset summary counts to show all objects
@@ -584,6 +702,31 @@ const TableController = {
         });
 
         rows.forEach(row => UIController.elements.scansTable.appendChild(row));
+    },
+
+    clearScannedObjectsTable() {
+        UIController.elements.scannedObjectsTab.innerHTML = '';
+    },
+
+    filterObjectsByXY(x, y) {
+        return function(obj) {
+            return obj.x === x && obj.y === y;
+        };
+    },
+
+    countObjectTypes(objects) {
+        return objects.reduce((counts, obj) => {
+            const type = obj.iffStatus || 'Unknown';
+            counts[type] = (counts[type] || 0) + 1;
+            return counts;
+        }, {});
+    },
+
+    showErrorMessage(message) {
+        NotificationController.show({
+            message: `Error: ${message}`,
+            type: 'error'
+        });
     }
 };
 
