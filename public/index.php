@@ -149,468 +149,446 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetchScannedObjects']))
         </div>
     </div>
     <script>
-function openTab(evt, tabName) {
-    // Hide all tab content
-    document.querySelectorAll('.tabcontent').forEach(tab => {
-        tab.style.display = 'none';
-    });
+// State management
+const AppState = {
+    currentScanId: null,
+    currentCoords: null,
+    sortOrder: 'asc'
+};
 
-    // Remove the "active" class from all tab buttons
-    document.querySelectorAll('.tablinks').forEach(tab => {
-        tab.classList.remove('active');
-    });
+// UI Controller
+const UIController = {
+    elements: {
+        scansTable: document.getElementById('scansTable'),
+        scannedObjectsTab: document.getElementById('ScannedObjects'),
+        notificationContainer: document.getElementById('notificationContainer'),
+        scanLocationHeader: document.getElementById('scanLocationHeader'),
+        fileInput: document.getElementById('xmlFile'),
+        mapContainer: document.querySelector('.map-container'),
+        grid: document.querySelector('.grid')
+    },
 
-    // Show the current tab
-    const tabToShow = document.getElementById(tabName);
-    if (tabToShow) {
-        tabToShow.style.display = 'block';
-    }
+    init() {
+        this.setupEventListeners();
+        this.createClearFilterButton();
+        TabController.openTab(null, 'ScannedObjects');
+        GridController.initializeGrid();
+        DataController.fetchScansData();
+    },
 
-    // Add the "active" class to the button that opened the tab (if an event is provided)
-    if (evt && evt.currentTarget) {
-        evt.currentTarget.classList.add('active');
-    }
-}
-
-// Sort table by column
-function sortTable(n) {
-    let table = document.getElementById("scansTable");
-    let rows = Array.from(table.rows).slice(1);
-    let asc = table.dataset.sortOrder !== "asc";
-    table.dataset.sortOrder = asc ? "asc" : "desc";
-
-    rows.sort((a, b) => {
-        let x = a.cells[n].textContent.trim();
-        let y = b.cells[n].textContent.trim();
-        return asc ? x.localeCompare(y, undefined, { numeric: true }) : y.localeCompare(x, undefined, { numeric: true });
-    });
-
-    rows.forEach(row => table.appendChild(row));
-}
-
-// File upload handler
-function handleFileUpload() {
-    const fileInput = document.getElementById('xmlFile');
-    if (!fileInput.files.length) return;
-
-    const formData = new FormData();
-    formData.append('xmlFile', fileInput.files[0]);
-
-    fetch('', { method: 'POST', body: formData })
-        .then(response => response.json())
-        .then(data => {
-            showNotification(data);
-            fileInput.value = '';
-            fetchScansData(); // Refresh the scans table
-        })
-        .catch(error => showNotification({ message: 'Upload failed: ' + error.message, type: 'error' }));
-}
-
-// Database reset handler
-function handleResetDB() {
-    const formData = new FormData();
-    formData.append('resetDB', 'true');
-
-    fetch('', { method: 'POST', body: formData })
-        .then(response => response.json())
-        .then(data => {
-            showNotification(data);
-            fetchScansData(); // Refresh the scans table
-            clearScannedObjectsTable(); // Clear the Scanned Objects table
-            clearGridColors(); // Clear the grid colors
-        })
-        .catch(error => showNotification({ message: 'Reset failed: ' + error.message, type: 'error' }));
-}
-
-// Notification system
-function showNotification(data) {
-    const container = document.getElementById('notificationContainer');
-    const notification = document.createElement('div');
-    notification.className = `notification ${data.type}`;
-    notification.innerHTML = `<span>${data.message}</span><button onclick="this.parentElement.remove()">&times;</button>`;
-    container.prepend(notification);
-}
-
-// Function to fetch scans data
-function fetchScansData() {
-    fetch('?fetchScans=true')
-        .then(response => response.json())
-        .then(data => updateScansTable(data))
-        .catch(error => showNotification({ message: 'Error fetching scans data: ' + error.message, type: 'error' }));
-}
-
-// Function to update the scans table
-function updateScansTable(scans) {
-    const tableBody = document.querySelector('#scansTable tbody');
-    if (!tableBody) {
-        showNotification({ message: 'Scans table body not found', type: 'error' });
-        return;
-    }
-
-    tableBody.innerHTML = ''; // Clear existing rows
-
-    scans.forEach(scan => {
-        const coords = `${scan.galX || 0}, ${scan.galY || 0}`;
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${scan.id}</td>
-            <td>${coords}</td>
-            <td>${scan.characterName}</td>
-            <td>
-                Year ${scan.years}, Day ${scan.days}, 
-                ${String(scan.hours).padStart(2, '0')}:
-                ${String(scan.minutes).padStart(2, '0')}:
-                ${String(scan.seconds).padStart(2, '0')}
-            </td>
-            <td>
-                <button class="view-button" 
-                        onclick="fetchScannedObjects(${scan.id}, '${coords}')"
-                >View</button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-// Function to clear the Scanned Objects table
-function clearScannedObjectsTable() {
-    const scannedObjectsTab = document.getElementById('ScannedObjects');
-    if (scannedObjectsTab) {
-        scannedObjectsTab.innerHTML = '<h3>Scanned Objects</h3>';
-    }
-}
-
-function fetchScannedObjects(scanID, coords) {
-    fetch(`?fetchScannedObjects=true&scanID=${scanID}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            updateScannedObjectsTable(data);
-            document.getElementById('scanLocationHeader').textContent = `Scan for ${coords}`;
-            openTab(null, 'ScannedObjects');
-        })
-        .catch(error => {
-            showNotification({ message: 'Error fetching scanned objects: ' + error.message, type: 'error' });
+    setupEventListeners() {
+        this.elements.fileInput.addEventListener('change', DataController.handleFileUpload);
+        this.elements.grid.querySelectorAll('.cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const x = parseInt(cell.dataset.x, 10);
+                const y = parseInt(cell.dataset.y, 10);
+                TableController.filterScannedObjectsByCoordinates(x, y);
+            });
         });
-}
+    },
 
-function updateScannedObjectsTable(scannedObjects) {
-    // First, clear all grid colors
-    clearGridColors();
-    
-    const scannedObjectsTab = document.getElementById('ScannedObjects');
-    if (!scannedObjectsTab) return;
+    createClearFilterButton() {
+        const button = document.createElement('button');
+        button.textContent = 'Clear Filter';
+        button.classList.add('clear-filter-button');
+        button.addEventListener('click', TableController.clearFilter);
+        this.elements.mapContainer.appendChild(button);
+    }
+};
 
-    // Create grid status map and object tracking
-    const gridStatus = {};
-    const gridObjects = {};
-    
-    // First pass: Collect all IFF statuses and objects for each coordinate
-    scannedObjects.forEach(obj => {
-        if (obj.iffStatus) {  // Only process objects with IFF status
-            const key = `${obj.x},${obj.y}`;
-            if (!gridStatus[key]) {
-                gridStatus[key] = new Set();
-                gridObjects[key] = [];
+// Tab Controller
+const TabController = {
+    openTab(evt, tabName) {
+        document.querySelectorAll('.tabcontent').forEach(tab => tab.style.display = 'none');
+        document.querySelectorAll('.tablinks').forEach(tab => tab.classList.remove('active'));
+
+        const tabToShow = document.getElementById(tabName);
+        if (tabToShow) tabToShow.style.display = 'block';
+        if (evt?.currentTarget) evt.currentTarget.classList.add('active');
+    }
+};
+
+// Grid Controller
+const GridController = {
+    initializeGrid() {
+        const cells = document.querySelectorAll('.grid .cell');
+        cells.forEach(cell => cell.style.backgroundColor = '#333');
+    },
+
+    clearGridColors() {
+        const cells = document.querySelectorAll('.grid .cell');
+        cells.forEach(cell => {
+            cell.classList.remove('enemy-only', 'friend-only', 'neutral-only', 'mixed');
+            cell.style.backgroundColor = '#333';
+            cell.querySelector('.entity-count')?.remove();
+        });
+    },
+
+    colorGridCell(x, y, statuses, objectsInCell) {
+        const cell = document.querySelector(`.grid .cell[data-x="${x}"][data-y="${y}"]`);
+        if (!cell) return;
+
+        cell.classList.remove('enemy-only', 'friend-only', 'neutral-only', 'mixed');
+
+        const colorMap = {
+            Enemy: { color: '#f5c6cb', class: 'enemy-only' },
+            Friend: { color: '#c3e6cb', class: 'friend-only' },
+            Neutral: { color: '#c095e7', class: 'neutral-only' }
+        };
+
+        if (statuses.length === 1) {
+            const status = statuses[0];
+            const style = colorMap[status];
+            if (style) {
+                cell.style.backgroundColor = style.color;
+                cell.classList.add(style.class);
             }
-            gridStatus[key].add(obj.iffStatus);
-            gridObjects[key].push(obj);
+        } else if (statuses.length > 1) {
+            cell.style.backgroundColor = '#ffd580';
+            cell.classList.add('mixed');
         }
-    });
 
-    // Second pass: Color each cell based on collected statuses
-    for (const [coords, statuses] of Object.entries(gridStatus)) {
-        const [x, y] = coords.split(',').map(Number);
-        colorGridCell(x, y, Array.from(statuses), gridObjects[coords]);
+        const entityCount = this.countNonWreckEntities(objectsInCell);
+        if (entityCount > 0) {
+            const countSpan = document.createElement('span');
+            countSpan.textContent = entityCount;
+            countSpan.className = 'entity-count';
+            countSpan.style.fontSize = entityCount > 99 ? '6px' : entityCount > 9 ? '8px' : '10px';
+            cell.appendChild(countSpan);
+        }
+    },
+
+    countNonWreckEntities(objects) {
+        return objects.filter(obj => 
+            obj.iffStatus && 
+            obj.typeName && 
+            !obj.typeName.toLowerCase().includes('wreck') &&
+            !obj.typeName.toLowerCase().includes('debris') &&
+            !obj.name.toLowerCase().includes('wreck') &&
+            !obj.name.toLowerCase().includes('debris')
+        ).length;
     }
+};
 
-    // Update table structure
-    scannedObjectsTab.innerHTML = `
-        <table>
-            <thead>
-                <tr>
-                    <th>Image</th>
-                    <th>Entity ID</th>
-                    <th>Name</th>
-                    <th>Type Name</th>
-                    <th>Owner Name</th>
-                    <th>IFF Status</th>
-                    <th>X</th>
-                    <th>Y</th>
-                    <th>Travel Direction</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    `;
+// Table Controller
+const TableController = {
+    updateScansTable(scans) {
+        const tableBody = UIController.elements.scansTable.querySelector('tbody');
+        if (!tableBody) {
+            NotificationController.show({ message: 'Scans table body not found', type: 'error' });
+            return;
+        }
 
-    const tableBody = scannedObjectsTab.querySelector('tbody');
+        tableBody.innerHTML = scans.map(scan => `
+            <tr>
+                <td>${scan.id}</td>
+                <td>${scan.galX || 0}, ${scan.galY || 0}</td>
+                <td>${scan.characterName}</td>
+                <td>
+                    Year ${scan.years}, Day ${scan.days}, 
+                    ${String(scan.hours).padStart(2, '0')}:
+                    ${String(scan.minutes).padStart(2, '0')}:
+                    ${String(scan.seconds).padStart(2, '0')}
+                </td>
+                <td>
+                    <button class="view-button" 
+                            onclick="DataController.fetchScannedObjects(${scan.id}, '${scan.galX || 0}, ${scan.galY || 0}')"
+                    >View</button>
+                </td>
+            </tr>
+        `).join('');
+    },
 
-    // Group objects by party
-    const groupedObjects = {};
-    scannedObjects.forEach(obj => {
-        const key = obj.partyLeaderUID || obj.entityUID;
-        if (!groupedObjects[key]) groupedObjects[key] = [];
-        groupedObjects[key].push(obj);
-    });
-
-    // Create unique IDs for each squad
-    let squadCounter = 0;
-
-    // Populate table with groups
-    Object.values(groupedObjects).forEach(group => {
-        squadCounter++;
-        const squadId = `squad-${squadCounter}`;
-        const partyLeaderUID = group[0].partyLeaderUID || group[0].entityUID;
+    updateScannedObjectsTable(scannedObjects) {
+        GridController.clearGridColors();
         
-        // Sort group to ensure party leader is first
-        group.sort((a, b) => {
-            if (a.entityUID === partyLeaderUID) return -1;
-            if (b.entityUID === partyLeaderUID) return 1;
-            return 0;
+        const gridStatus = {};
+        const gridObjects = {};
+        
+        scannedObjects.forEach(obj => {
+            if (obj.iffStatus) {
+                const key = `${obj.x},${obj.y}`;
+                if (!gridStatus[key]) {
+                    gridStatus[key] = new Set();
+                    gridObjects[key] = [];
+                }
+                gridStatus[key].add(obj.iffStatus);
+                gridObjects[key].push(obj);
+            }
         });
 
-        const partyLeader = group[0];
-        const shipCount = group.length;
+        Object.entries(gridStatus).forEach(([coords, statuses]) => {
+            const [x, y] = coords.split(',').map(Number);
+            GridController.colorGridCell(x, y, Array.from(statuses), gridObjects[coords]);
+        });
 
-        // Add squad header
+        this.renderScannedObjectsTable(scannedObjects);
+    },
+
+    renderScannedObjectsTable(scannedObjects) {
+        UIController.elements.scannedObjectsTab.innerHTML = this.createTableHeader();
+        const tableBody = UIController.elements.scannedObjectsTab.querySelector('tbody');
+        
+        const groupedObjects = this.groupObjectsByParty(scannedObjects);
+        let squadCounter = 0;
+
+        Object.values(groupedObjects).forEach(group => {
+            squadCounter++;
+            const squadId = `squad-${squadCounter}`;
+            this.renderSquad(tableBody, group, squadId);
+        });
+
+        this.setupSquadToggles();
+    },
+
+    createTableHeader() {
+        return `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Entity ID</th>
+                        <th>Name</th>
+                        <th>Type Name</th>
+                        <th>Owner Name</th>
+                        <th>IFF Status</th>
+                        <th>X</th>
+                        <th>Y</th>
+                        <th>Travel Direction</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        `;
+    },
+
+    groupObjectsByParty(objects) {
+        const groups = {};
+        objects.forEach(obj => {
+            const key = obj.partyLeaderUID || obj.entityUID;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(obj);
+        });
+        return groups;
+    },
+
+    renderSquad(tableBody, group, squadId) {
+        const partyLeaderUID = group[0].partyLeaderUID || group[0].entityUID;
+        group.sort((a, b) => a.entityUID === partyLeaderUID ? -1 : b.entityUID === partyLeaderUID ? 1 : 0);
+
+        const headerRow = this.createSquadHeader(group, squadId);
+        tableBody.appendChild(headerRow);
+
+        group.forEach((obj, index) => {
+            const row = this.createSquadMemberRow(obj, index === 0, squadId);
+            tableBody.appendChild(row);
+        });
+    },
+
+    createSquadHeader(group, squadId) {
         const headerRow = document.createElement('tr');
-        headerRow.className = `party-group ${getIffStatusClass(partyLeader.iffStatus, true)}`;
-        // When creating the header row, change the span content to use an image
+        headerRow.className = `party-group ${this.getIffStatusClass(group[0].iffStatus, true)}`;
         headerRow.innerHTML = `
             <td colspan="9">
                 <span class="squad-toggle" data-target="${squadId}" data-state="collapsed">
                     <img src="/assets/images/plus.png" alt="Expand" class="toggle-icon">
                 </span>
-                <strong>Squad: ${shipCount} Ship${shipCount !== 1 ? 's' : ''}</strong>
+                <strong>Squad: ${group.length} Ship${group.length !== 1 ? 's' : ''}</strong>
             </td>
         `;
-        tableBody.appendChild(headerRow);
+        return headerRow;
+    },
 
-        // Add all squad members (leader and others)
-        group.forEach((obj, index) => {
-            const isLeader = index === 0;
-            const row = document.createElement('tr');
-            row.className = getIffStatusClass(obj.iffStatus, isLeader);
-            if (!isLeader) {
-                row.classList.add(squadId);
-                row.style.display = 'none'; // Hide non-leader rows initially
-            }
-            row.innerHTML = `
-                <td><img src="${obj.image}" alt="${obj.name}" style="max-width: 50px;"></td>
-                <td>${obj.entityUID}</td>
-                <td>${obj.name}</td>
-                <td>${obj.typeName}</td>
-                <td>${obj.ownerName}</td>
-                <td>${obj.iffStatus}</td>
-                <td>${obj.x}</td>
-                <td>${obj.y}</td>
-                <td>${obj.travelDirection}</td>
-            `;
-            tableBody.appendChild(row);
-        });
-    });
-
-    // In the click handler section of updateScannedObjectsTable
-    document.querySelectorAll('.squad-toggle').forEach(toggle => {
-        toggle.addEventListener('click', function() {
-            const targetId = this.getAttribute('data-target');
-            const targetRows = document.querySelectorAll(`.${targetId}`);
-            const currentState = this.getAttribute('data-state');
-            const toggleIcon = this.querySelector('.toggle-icon');
-            
-            if (currentState === 'collapsed') {
-                targetRows.forEach(row => row.style.display = '');
-                toggleIcon.src = '/assets/images/minus.png';
-                toggleIcon.alt = 'Collapse';
-                this.setAttribute('data-state', 'expanded');
-            } else {
-                targetRows.forEach(row => row.style.display = 'none');
-                toggleIcon.src = '/assets/images/plus.png';
-                toggleIcon.alt = 'Expand';
-                this.setAttribute('data-state', 'collapsed');
-            }
-        });
-    });
-}
-
-// Add a helper function to count non-wreck entities
-function countNonWreckEntities(objects) {
-    return objects.filter(obj => 
-        obj.iffStatus && 
-        obj.typeName && 
-        !obj.typeName.toLowerCase().includes('wreck') &&
-        !obj.typeName.toLowerCase().includes('debris') &&
-        !obj.name.toLowerCase().includes('wreck') &&
-        !obj.name.toLowerCase().includes('debris')
-    ).length;
-}
-
-function clearGridColors() {
-    const cells = document.querySelectorAll('.grid .cell');
-    cells.forEach(cell => {
-        // Remove all possible status classes
-        cell.classList.remove('enemy-only', 'friend-only', 'neutral-only', 'mixed');
-        // Reset to default background
-        cell.style.backgroundColor = '#333';
-        
-        // Clear any existing count
-        const existingCount = cell.querySelector('.entity-count');
-        if (existingCount) {
-            existingCount.remove();
-        }
-    });
-}
-
-function colorGridCell(x, y, statuses, objectsInCell) {
-    const cell = document.querySelector(`.grid .cell[data-x="${x}"][data-y="${y}"]`);
-    if (!cell) {
-        return;
-    }
-
-    // Remove any existing status classes
-    cell.classList.remove('enemy-only', 'friend-only', 'neutral-only', 'mixed');
-
-    // Determine cell color based on statuses
-    if (statuses.length === 1) {
-        const status = statuses[0];
-        switch (status) {
-            case 'Enemy':
-                cell.style.backgroundColor = '#f5c6cb';
-                cell.classList.add('enemy-only');
-                break;
-            case 'Friend':
-                cell.style.backgroundColor = '#c3e6cb';
-                cell.classList.add('friend-only');
-                break;
-            case 'Neutral':
-                cell.style.backgroundColor = '#c095e7';
-                cell.classList.add('neutral-only');
-                break;
-        }
-    } else if (statuses.length > 1) {
-        cell.style.backgroundColor = '#ffd580';
-        cell.classList.add('mixed');
-    }
-
-    // Add entity count if non-zero
-    const entityCount = countNonWreckEntities(objectsInCell);
-    if (entityCount > 0) {
-        const countSpan = document.createElement('span');
-        countSpan.textContent = entityCount;
-        countSpan.className = 'entity-count';
-        
-        // Dynamically adjust font size based on count
-        if (entityCount > 9) {
-            countSpan.style.fontSize = '8px';
-        }
-        if (entityCount > 99) {
-            countSpan.style.fontSize = '6px';
-        }
-        
-        cell.appendChild(countSpan);
-    }
-}
-
-// Function to get IFF status class
-function getIffStatusClass(iffStatus, isLeader = false) {
-    if (!iffStatus) return '';
-
-    switch (iffStatus) {
-        case 'Friend':
-            return isLeader ? 'friend-leader' : 'friend';
-        case 'Enemy':
-            return isLeader ? 'enemy-leader' : 'enemy';
-        case 'Neutral':
-            return isLeader ? 'neutral-leader' : 'neutral';
-        default:
-            return '';
-    }
-}
-
-// Updated filter function
-function filterScannedObjectsByCoordinates(x, y) {
-    const scannedObjectsTab = document.getElementById('ScannedObjects');
-    const table = scannedObjectsTab.querySelector('table');
-    if (!table) return;
-
-    const rows = table.querySelectorAll('tbody tr');
-    let currentPartyHeader = null;
-    let hasVisibleMembersInParty = false;
-
-    rows.forEach(row => {
-        if (row.classList.contains('party-group')) {
-            currentPartyHeader = row;
-            hasVisibleMembersInParty = false;
+    createSquadMemberRow(obj, isLeader, squadId) {
+        const row = document.createElement('tr');
+        row.className = this.getIffStatusClass(obj.iffStatus, isLeader);
+        if (!isLeader) {
+            row.classList.add(squadId);
             row.style.display = 'none';
-        } else if (currentPartyHeader) {
-            const rowX = parseInt(row.cells[6].textContent, 10);
-            const rowY = parseInt(row.cells[7].textContent, 10);
-
-            if (rowX === x && rowY === y) {
-                row.style.display = '';
-                hasVisibleMembersInParty = true;
-            } else {
-                row.style.display = 'none';
-            }
-
-            if (hasVisibleMembersInParty) {
-                currentPartyHeader.style.display = '';
-            }
         }
-    });
-}
+        row.innerHTML = `
+            <td><img src="${obj.image}" alt="${obj.name}" style="max-width: 50px;"></td>
+            <td>${obj.entityUID}</td>
+            <td>${obj.name}</td>
+            <td>${obj.typeName}</td>
+            <td>${obj.ownerName}</td>
+            <td>${obj.iffStatus}</td>
+            <td>${obj.x}</td>
+            <td>${obj.y}</td>
+            <td>${obj.travelDirection}</td>
+        `;
+        return row;
+    },
 
-// Updated clear filter function
-function clearFilter() {
-    const scannedObjectsTab = document.getElementById('ScannedObjects');
-    const table = scannedObjectsTab.querySelector('table');
-    if (!table) return;
-
-    const rows = table.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-        row.style.display = '';
-    });
-}
-
-// Event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize default tab
-    openTab(null, 'ScannedObjects');
-    
-    const cells = document.querySelectorAll('.grid .cell');
-    cells.forEach(cell => {
-        // Test that we can color each cell
-        cell.style.backgroundColor = '#333';
-    });
-    // Fetch initial scans data
-    fetchScansData();
-
-    // Add click handlers to grid cells
-    const gridCells = document.querySelectorAll('.grid .cell');
-    gridCells.forEach(cell => {
-        cell.addEventListener('click', () => {
-            const x = parseInt(cell.getAttribute('data-x'), 10);
-            const y = parseInt(cell.getAttribute('data-y'), 10);
-            filterScannedObjectsByCoordinates(x, y);
+    setupSquadToggles() {
+        document.querySelectorAll('.squad-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const targetId = this.dataset.target;
+                const targetRows = document.querySelectorAll(`.${targetId}`);
+                const currentState = this.dataset.state;
+                const toggleIcon = this.querySelector('.toggle-icon');
+                
+                const newState = currentState === 'collapsed' ? 'expanded' : 'collapsed';
+                targetRows.forEach(row => row.style.display = newState === 'expanded' ? '' : 'none');
+                toggleIcon.src = `/assets/images/${newState === 'expanded' ? 'minus' : 'plus'}.png`;
+                toggleIcon.alt = newState === 'expanded' ? 'Collapse' : 'Expand';
+                this.dataset.state = newState;
+            });
         });
-    });
-    
-    // Add clear filter button
-    const clearFilterButton = document.createElement('button');
-    clearFilterButton.textContent = 'Clear Filter';
-    clearFilterButton.classList.add('clear-filter-button');
-    clearFilterButton.addEventListener('click', clearFilter);
+    },
 
-    const mapContainer = document.querySelector('.map-container');
-    if (mapContainer) {
-        mapContainer.appendChild(clearFilterButton);
+    getIffStatusClass(iffStatus, isLeader = false) {
+        if (!iffStatus) return '';
+        const statusMap = {
+            Friend: isLeader ? 'friend-leader' : 'friend',
+            Enemy: isLeader ? 'enemy-leader' : 'enemy',
+            Neutral: isLeader ? 'neutral-leader' : 'neutral'
+        };
+        return statusMap[iffStatus] || '';
+    },
+
+    filterScannedObjectsByCoordinates(x, y) {
+        const table = UIController.elements.scannedObjectsTab.querySelector('table');
+        if (!table) return;
+
+        const rows = table.querySelectorAll('tbody tr');
+        let currentPartyHeader = null;
+        let hasVisibleMembersInParty = false;
+
+        rows.forEach(row => {
+            if (row.classList.contains('party-group')) {
+                currentPartyHeader = row;
+                hasVisibleMembersInParty = false;
+                row.style.display = 'none';
+            } else if (currentPartyHeader) {
+                const rowX = parseInt(row.cells[6].textContent, 10);
+                const rowY = parseInt(row.cells[7].textContent, 10);
+
+                const isVisible = rowX === x && rowY === y;
+                row.style.display = isVisible ? '' : 'none';
+                hasVisibleMembersInParty ||= isVisible;
+
+                if (hasVisibleMembersInParty) {
+                    currentPartyHeader.style.display = '';
+                }
+            }
+        });
+    },
+
+    clearFilter() {
+        const table = UIController.elements.scannedObjectsTab.querySelector('table');
+        if (!table) return;
+        table.querySelectorAll('tbody tr').forEach(row => row.style.display = '');
+    },
+
+    sortTable(n) {
+        const rows = Array.from(UIController.elements.scansTable.rows).slice(1);
+        AppState.sortOrder = AppState.sortOrder === 'asc' ? 'desc' : 'asc';
+        
+        rows.sort((a, b) => {
+            const x = a.cells[n].textContent.trim();
+            const y = b.cells[n].textContent.trim();
+            return AppState.sortOrder === 'asc' 
+                ? x.localeCompare(y, undefined, { numeric: true })
+                : y.localeCompare(x, undefined, { numeric: true });
+        });
+
+        rows.forEach(row => UIController.elements.scansTable.appendChild(row));
     }
-});
+};
+
+// Data Controller
+const DataController = {
+    async handleFileUpload() {
+        if (!UIController.elements.fileInput.files.length) return;
+
+        const formData = new FormData();
+        formData.append('xmlFile', UIController.elements.fileInput.files[0]);
+
+        try {
+            const response = await fetch('', { method: 'POST', body: formData });
+            const data = await response.json();
+            NotificationController.show(data);
+            UIController.elements.fileInput.value = '';
+            await DataController.fetchScansData();
+        } catch (error) {
+            NotificationController.show({ 
+                message: 'Upload failed: ' + error.message, 
+                type: 'error' 
+            });
+        }
+    },
+
+    async handleResetDB() {
+        const formData = new FormData();
+        formData.append('resetDB', 'true');
+
+        try {
+            const response = await fetch('', { method: 'POST', body: formData });
+            const data = await response.json();
+            NotificationController.show(data);
+            await DataController.fetchScansData();
+            TableController.clearScannedObjectsTable();
+            GridController.clearGridColors();
+        } catch (error) {
+            NotificationController.show({ 
+                message: 'Reset failed: ' + error.message,
+                type: 'error'
+            });
+        }
+    },
+
+    async fetchScansData() {
+        try {
+            const response = await fetch('?fetchScans=true');
+            const data = await response.json();
+            TableController.updateScansTable(data);
+        } catch (error) {
+            NotificationController.show({
+                message: 'Error fetching scans data: ' + error.message,
+                type: 'error'
+            });
+        }
+    },
+
+    async fetchScannedObjects(scanId, coords) {
+        try {
+            const response = await fetch(`?fetchScannedObjects=true&scanID=${scanId}`);
+            if (!response.ok) throw new Error('Network response was not ok');
+            
+            const data = await response.json();
+            TableController.updateScannedObjectsTable(data);
+            UIController.elements.scanLocationHeader.textContent = `Scan for ${coords}`;
+            TabController.openTab(null, 'ScannedObjects');
+        } catch (error) {
+            NotificationController.show({
+                message: 'Error fetching scanned objects: ' + error.message,
+                type: 'error'
+            });
+        }
+    }
+};
+
+// Notification Controller
+const NotificationController = {
+    show(data) {
+        const notification = document.createElement('div');
+        notification.className = `notification ${data.type}`;
+        notification.innerHTML = `
+            <span>${data.message}</span>
+            <button onclick="this.parentElement.remove()">&times;</button>
+        `;
+        UIController.elements.notificationContainer.prepend(notification);
+    }
+};
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', () => UIController.init());
+
+// Expose necessary functions to global scope for onclick handlers
+window.handleResetDB = DataController.handleResetDB;
+window.openTab = TabController.openTab;
+window.sortTable = TableController.sortTable;
 </script>
 </body>
 </html>
