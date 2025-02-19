@@ -212,14 +212,13 @@ const TabController = {
 const GridController = {
     initializeGrid() {
         const cells = document.querySelectorAll('.grid .cell');
-        cells.forEach(cell => cell.style.backgroundColor = '#333');
+        cells.forEach(cell => cell.classList.add('cell'));
     },
 
     clearGridColors() {
         const cells = document.querySelectorAll('.grid .cell');
         cells.forEach(cell => {
             cell.classList.remove('enemy-only', 'friend-only', 'neutral-only', 'mixed');
-            cell.style.backgroundColor = '#333';
             cell.querySelector('.entity-count')?.remove();
         });
     },
@@ -228,32 +227,30 @@ const GridController = {
         const cell = document.querySelector(`.grid .cell[data-x="${x}"][data-y="${y}"]`);
         if (!cell) return;
 
+        // Clear any existing status classes
         cell.classList.remove('enemy-only', 'friend-only', 'neutral-only', 'mixed');
 
-        const colorMap = {
-            Enemy: { color: '#f5c6cb', class: 'enemy-only' },
-            Friend: { color: '#c3e6cb', class: 'friend-only' },
-            Neutral: { color: '#c095e7', class: 'neutral-only' }
-        };
-
+        // Add appropriate class based on status
         if (statuses.length === 1) {
             const status = statuses[0];
-            const style = colorMap[status];
-            if (style) {
-                cell.style.backgroundColor = style.color;
-                cell.classList.add(style.class);
-            }
+            cell.classList.add(`${status.toLowerCase()}-only`);
         } else if (statuses.length > 1) {
-            cell.style.backgroundColor = '#ffd580';
             cell.classList.add('mixed');
         }
 
+        // Remove any existing entity count display
+        cell.querySelector('.entity-count')?.remove();
+
+        // Add entity count if there are non-wreck entities
         const entityCount = this.countNonWreckEntities(objectsInCell);
         if (entityCount > 0) {
             const countSpan = document.createElement('span');
             countSpan.textContent = entityCount;
-            countSpan.className = 'entity-count';
-            countSpan.style.fontSize = entityCount > 99 ? '6px' : entityCount > 9 ? '8px' : '10px';
+            countSpan.className = `entity-count ${
+                entityCount > 99 ? 'small' : 
+                entityCount > 9 ? 'medium' : 
+                'large'
+            }`;
             cell.appendChild(countSpan);
         }
     },
@@ -400,27 +397,31 @@ const TableController = {
     },
 
     createSquadMemberRow(obj, isLeader, squadId) {
-        const row = document.createElement('tr');
-        row.className = this.getIffStatusClass(obj.iffStatus, isLeader);
-        if (!isLeader) {
-            row.classList.add(squadId);
-            row.style.display = 'none';
-        }
-        row.innerHTML = `
-            <td><img src="${obj.image}" alt="${obj.name}" style="max-width: 50px;"></td>
-            <td>${obj.entityUID}</td>
-            <td>${obj.name}</td>
-            <td>${obj.typeName}</td>
-            <td>${obj.ownerName}</td>
-            <td>${obj.iffStatus}</td>
-            <td>${obj.x}</td>
-            <td>${obj.y}</td>
-            <td>${obj.travelDirection}</td>
-        `;
-        return row;
-    },
+    const row = document.createElement('tr');
+    row.className = this.getIffStatusClass(obj.iffStatus, isLeader);
+    
+    // Add squad ID class and set initial visibility
+    if (!isLeader) {
+        row.classList.add(squadId);
+        // Instead of style.display = 'none', use a CSS class
+        row.classList.add('hidden');
+    }
+    
+    row.innerHTML = `
+        <td><img src="${obj.image}" alt="${obj.name}"></td>
+        <td>${obj.entityUID}</td>
+        <td>${obj.name}</td>
+        <td>${obj.typeName}</td>
+        <td>${obj.ownerName}</td>
+        <td>${obj.iffStatus}</td>
+        <td>${obj.x}</td>
+        <td>${obj.y}</td>
+        <td>${obj.travelDirection}</td>
+    `;
+    return row;
+},
 
-    setupSquadToggles() {
+setupSquadToggles() {
         document.querySelectorAll('.squad-toggle').forEach(toggle => {
             toggle.addEventListener('click', function() {
                 const targetId = this.dataset.target;
@@ -429,7 +430,15 @@ const TableController = {
                 const toggleIcon = this.querySelector('.toggle-icon');
                 
                 const newState = currentState === 'collapsed' ? 'expanded' : 'collapsed';
-                targetRows.forEach(row => row.style.display = newState === 'expanded' ? '' : 'none');
+                targetRows.forEach(row => {
+                    // Instead of style.display, toggle the hidden class
+                    if (newState === 'expanded') {
+                        row.classList.remove('hidden');
+                    } else {
+                        row.classList.add('hidden');
+                    }
+                });
+                
                 toggleIcon.src = `/assets/images/${newState === 'expanded' ? 'minus' : 'plus'}.png`;
                 toggleIcon.alt = newState === 'expanded' ? 'Collapse' : 'Expand';
                 this.dataset.state = newState;
@@ -448,38 +457,62 @@ const TableController = {
     },
 
     filterScannedObjectsByCoordinates(x, y) {
-        const table = UIController.elements.scannedObjectsTab.querySelector('table');
-        if (!table) return;
+    const table = UIController.elements.scannedObjectsTab.querySelector('table');
+    if (!table) return;
 
-        const rows = table.querySelectorAll('tbody tr');
-        let currentPartyHeader = null;
-        let hasVisibleMembersInParty = false;
+    // Clear any previous cell highlighting
+    document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
+        cell.classList.remove('highlighted');
+    });
 
-        rows.forEach(row => {
-            if (row.classList.contains('party-group')) {
-                currentPartyHeader = row;
-                hasVisibleMembersInParty = false;
-                row.style.display = 'none';
-            } else if (currentPartyHeader) {
-                const rowX = parseInt(row.cells[6].textContent, 10);
-                const rowY = parseInt(row.cells[7].textContent, 10);
+    // Highlight the selected cell
+    const selectedCell = document.querySelector(`.grid .cell[data-x="${x}"][data-y="${y}"]`);
+    if (selectedCell) {
+        selectedCell.classList.add('highlighted');
+    }
 
-                const isVisible = rowX === x && rowY === y;
-                row.style.display = isVisible ? '' : 'none';
-                hasVisibleMembersInParty ||= isVisible;
+    const rows = table.querySelectorAll('tbody tr');
+    let currentPartyHeader = null;
+    let hasVisibleMembersInParty = false;
 
-                if (hasVisibleMembersInParty) {
-                    currentPartyHeader.style.display = '';
-                }
+    rows.forEach(row => {
+        if (row.classList.contains('party-group')) {
+            currentPartyHeader = row;
+            hasVisibleMembersInParty = false;
+            currentPartyHeader.classList.add('hidden');
+        } else if (currentPartyHeader) {
+            const rowX = parseInt(row.cells[6].textContent, 10);
+            const rowY = parseInt(row.cells[7].textContent, 10);
+
+            const isVisible = rowX === x && rowY === y;
+            if (isVisible) {
+                row.classList.remove('hidden');
+                hasVisibleMembersInParty = true;
+            } else {
+                row.classList.add('hidden');
             }
-        });
-    },
 
-    clearFilter() {
-        const table = UIController.elements.scannedObjectsTab.querySelector('table');
-        if (!table) return;
-        table.querySelectorAll('tbody tr').forEach(row => row.style.display = '');
-    },
+            if (hasVisibleMembersInParty) {
+                currentPartyHeader.classList.remove('hidden');
+            }
+        }
+    });
+},
+
+clearFilter() {
+    const table = UIController.elements.scannedObjectsTab.querySelector('table');
+    if (!table) return;
+
+    // Clear cell highlighting
+    document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
+        cell.classList.remove('highlighted');
+    });
+
+    // Show all rows
+    table.querySelectorAll('tbody tr').forEach(row => {
+        row.classList.remove('hidden');
+    });
+},
 
     sortTable(n) {
         const rows = Array.from(UIController.elements.scansTable.rows).slice(1);

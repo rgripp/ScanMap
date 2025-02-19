@@ -69,6 +69,7 @@ body {
     border: 1px solid #555;
     box-sizing: border-box;
     position: relative;
+    cursor: pointer;
 }
 
 .grid .header {
@@ -85,12 +86,6 @@ body {
     color: #ddd;
 }
 
-@media screen and (max-width: 480px) {
-    .grid .header {
-        font-size: 8px;
-    }
-}
-
 /* Entity Count Badge */
 .grid .cell .entity-count {
     position: absolute;
@@ -99,7 +94,6 @@ body {
     transform: translate(-50%, -50%);
     background-color: rgba(255, 255, 255, 0.9);
     color: black;
-    font-size: 8px;
     min-width: 12px;
     height: 12px;
     border-radius: 50%;
@@ -109,6 +103,10 @@ body {
     line-height: 1;
     padding: 1px;
 }
+
+.entity-count.small { font-size: 6px; }
+.entity-count.medium { font-size: 8px; }
+.entity-count.large { font-size: 10px; }
 
 /* Tabs Container Styling */
 .tabs-container {
@@ -144,6 +142,10 @@ body {
     display: none;
 }
 
+.tabcontent.active {
+    display: block;
+}
+
 /* Table Styling */
 table {
     width: 100%;
@@ -164,6 +166,11 @@ table th {
     cursor: pointer;
     font-size: 13px;
     font-weight: bold;
+}
+
+/* Table Cell Image */
+table td img {
+    max-width: 50px;
 }
 
 /* Button Container */
@@ -190,7 +197,6 @@ table th {
     font-weight: 600;
 }
 
-/* Button hover states */
 .custom-file-input:hover,
 .reset-button:hover,
 .view-button:hover,
@@ -198,7 +204,6 @@ table th {
     background-color: #0052a3;
 }
 
-/* Specific button width adjustments */
 .reset-button {
     width: auto;
     flex-grow: 0;
@@ -208,6 +213,11 @@ table th {
 .custom-file-input {
     width: auto;
     flex-grow: 1;
+}
+
+/* File Input Styling */
+.file-input-wrapper input[type="file"] {
+    display: none;
 }
 
 /* Notification Styling */
@@ -257,6 +267,7 @@ table th {
 .neutral { background-color: #3d2d4d; }
 .neutral-leader { background-color: #6c4a8c; }
 
+/* Scan Location Header */
 .scan-location-header {
     width: 100%;
     text-align: center;
@@ -269,7 +280,7 @@ table th {
     color: #ddd;
 }
 
-/* Squad toggle control styling */
+/* Squad Toggle Control */
 .squad-toggle {
     display: inline-block;
     width: 16px;
@@ -290,4 +301,20 @@ table th {
     width: 12px;
     height: 12px;
     vertical-align: middle;
+}
+
+/* Party Group Row */
+.party-group td {
+    padding: 8px;
+}
+
+/* Hidden Elements */
+.hidden {
+    display: none;
+}
+
+/* Highligher */
+.grid .cell.highlighted {
+    border: 2px solid #007bff;
+    box-shadow: 0 0 5px #007bff;
 }
