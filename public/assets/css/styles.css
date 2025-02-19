@@ -318,3 +318,30 @@ table td img {
     border: 2px solid #007bff;
     box-shadow: 0 0 5px #007bff;
 }
+
+.ship-count-summary {
+    background-color: #404040;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    color: #ddd;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.ship-count-summary .enemy-count {
+    color: #ff7f7f;
+}
+
+.ship-count-summary .friend-count {
+    color: #90ee90;
+}
+
+.ship-count-summary .neutral-count {
+    color: #b19cd9;
+}
+
+.ship-count-summary .wreck-count {
+    color: #aaa;
+}

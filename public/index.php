@@ -299,6 +299,10 @@ const TableController = {
     updateScannedObjectsTable(scannedObjects) {
         GridController.clearGridColors();
         
+        // Add ship counts summary first
+        const summaryHtml = this.createShipCountSummary(scannedObjects);
+        UIController.elements.scannedObjectsTab.innerHTML = summaryHtml;
+        
         const gridStatus = {};
         const gridObjects = {};
         
@@ -319,11 +323,8 @@ const TableController = {
             GridController.colorGridCell(x, y, Array.from(statuses), gridObjects[coords]);
         });
 
-        this.renderScannedObjectsTable(scannedObjects);
-    },
-
-    renderScannedObjectsTable(scannedObjects) {
-        UIController.elements.scannedObjectsTab.innerHTML = this.createTableHeader();
+        // Add table after summary
+        UIController.elements.scannedObjectsTab.innerHTML += this.createTableHeader();
         const tableBody = UIController.elements.scannedObjectsTab.querySelector('tbody');
         
         const groupedObjects = this.groupObjectsByParty(scannedObjects);
@@ -336,6 +337,39 @@ const TableController = {
         });
 
         this.setupSquadToggles();
+    },
+
+    createShipCountSummary(objects) {
+        const counts = {
+            enemy: 0,
+            friend: 0,
+            neutral: 0,
+            wreck: 0
+        };
+
+        objects.forEach(obj => {
+            if (obj.typeName?.toLowerCase().includes('wreck') || 
+                obj.typeName?.toLowerCase().includes('debris') ||
+                obj.name?.toLowerCase().includes('wreck') ||
+                obj.name?.toLowerCase().includes('debris')) {
+                counts.wreck++;
+            } else if (obj.iffStatus === 'Enemy') {
+                counts.enemy++;
+            } else if (obj.iffStatus === 'Friend') {
+                counts.friend++;
+            } else if (obj.iffStatus === 'Neutral') {
+                counts.neutral++;
+            }
+        });
+
+        return `
+            <div class="ship-count-summary">
+                Enemy Ships: <span class="enemy-count">${counts.enemy}</span> | 
+                Friendly Ships: <span class="friend-count">${counts.friend}</span> | 
+                Neutral Ships: <span class="neutral-count">${counts.neutral}</span> | 
+                Wrecks: <span class="wreck-count">${counts.wreck}</span>
+            </div>
+        `;
     },
 
     createTableHeader() {
@@ -397,31 +431,29 @@ const TableController = {
     },
 
     createSquadMemberRow(obj, isLeader, squadId) {
-    const row = document.createElement('tr');
-    row.className = this.getIffStatusClass(obj.iffStatus, isLeader);
-    
-    // Add squad ID class and set initial visibility
-    if (!isLeader) {
-        row.classList.add(squadId);
-        // Instead of style.display = 'none', use a CSS class
-        row.classList.add('hidden');
-    }
-    
-    row.innerHTML = `
-        <td><img src="${obj.image}" alt="${obj.name}"></td>
-        <td>${obj.entityUID}</td>
-        <td>${obj.name}</td>
-        <td>${obj.typeName}</td>
-        <td>${obj.ownerName}</td>
-        <td>${obj.iffStatus}</td>
-        <td>${obj.x}</td>
-        <td>${obj.y}</td>
-        <td>${obj.travelDirection}</td>
-    `;
-    return row;
-},
+        const row = document.createElement('tr');
+        row.className = this.getIffStatusClass(obj.iffStatus, isLeader);
+        
+        if (!isLeader) {
+            row.classList.add(squadId);
+            row.classList.add('hidden');
+        }
+        
+        row.innerHTML = `
+            <td><img src="${obj.image}" alt="${obj.name}"></td>
+            <td>${obj.entityUID}</td>
+            <td>${obj.name}</td>
+            <td>${obj.typeName}</td>
+            <td>${obj.ownerName}</td>
+            <td>${obj.iffStatus}</td>
+            <td>${obj.x}</td>
+            <td>${obj.y}</td>
+            <td>${obj.travelDirection}</td>
+        `;
+        return row;
+    },
 
-setupSquadToggles() {
+    setupSquadToggles() {
         document.querySelectorAll('.squad-toggle').forEach(toggle => {
             toggle.addEventListener('click', function() {
                 const targetId = this.dataset.target;
@@ -431,7 +463,6 @@ setupSquadToggles() {
                 
                 const newState = currentState === 'collapsed' ? 'expanded' : 'collapsed';
                 targetRows.forEach(row => {
-                    // Instead of style.display, toggle the hidden class
                     if (newState === 'expanded') {
                         row.classList.remove('hidden');
                     } else {
@@ -457,62 +488,88 @@ setupSquadToggles() {
     },
 
     filterScannedObjectsByCoordinates(x, y) {
-    const table = UIController.elements.scannedObjectsTab.querySelector('table');
-    if (!table) return;
+        const table = UIController.elements.scannedObjectsTab.querySelector('table');
+        if (!table) return;
 
-    // Clear any previous cell highlighting
-    document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
-        cell.classList.remove('highlighted');
-    });
+        // Clear any previous cell highlighting
+        document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
+            cell.classList.remove('highlighted');
+        });
 
-    // Highlight the selected cell
-    const selectedCell = document.querySelector(`.grid .cell[data-x="${x}"][data-y="${y}"]`);
-    if (selectedCell) {
-        selectedCell.classList.add('highlighted');
-    }
-
-    const rows = table.querySelectorAll('tbody tr');
-    let currentPartyHeader = null;
-    let hasVisibleMembersInParty = false;
-
-    rows.forEach(row => {
-        if (row.classList.contains('party-group')) {
-            currentPartyHeader = row;
-            hasVisibleMembersInParty = false;
-            currentPartyHeader.classList.add('hidden');
-        } else if (currentPartyHeader) {
-            const rowX = parseInt(row.cells[6].textContent, 10);
-            const rowY = parseInt(row.cells[7].textContent, 10);
-
-            const isVisible = rowX === x && rowY === y;
-            if (isVisible) {
-                row.classList.remove('hidden');
-                hasVisibleMembersInParty = true;
-            } else {
-                row.classList.add('hidden');
-            }
-
-            if (hasVisibleMembersInParty) {
-                currentPartyHeader.classList.remove('hidden');
-            }
+        // Highlight the selected cell
+        const selectedCell = document.querySelector(`.grid .cell[data-x="${x}"][data-y="${y}"]`);
+        if (selectedCell) {
+            selectedCell.classList.add('highlighted');
         }
-    });
-},
 
-clearFilter() {
-    const table = UIController.elements.scannedObjectsTab.querySelector('table');
-    if (!table) return;
+        const filteredObjects = [];
+        const rows = table.querySelectorAll('tbody tr');
+        let currentPartyHeader = null;
+        let hasVisibleMembersInParty = false;
 
-    // Clear cell highlighting
-    document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
-        cell.classList.remove('highlighted');
-    });
+        rows.forEach(row => {
+            if (row.classList.contains('party-group')) {
+                currentPartyHeader = row;
+                hasVisibleMembersInParty = false;
+                currentPartyHeader.classList.add('hidden');
+            } else if (currentPartyHeader) {
+                const rowX = parseInt(row.cells[6].textContent, 10);
+                const rowY = parseInt(row.cells[7].textContent, 10);
+                const isVisible = rowX === x && rowY === y;
 
-    // Show all rows
-    table.querySelectorAll('tbody tr').forEach(row => {
-        row.classList.remove('hidden');
-    });
-},
+                if (isVisible) {
+                    row.classList.remove('hidden');
+                    hasVisibleMembersInParty = true;
+                    // Add to filtered objects for counting
+                    filteredObjects.push({
+                        typeName: row.cells[3].textContent,
+                        name: row.cells[2].textContent,
+                        iffStatus: row.cells[5].textContent
+                    });
+                } else {
+                    row.classList.add('hidden');
+                }
+
+                if (hasVisibleMembersInParty) {
+                    currentPartyHeader.classList.remove('hidden');
+                }
+            }
+        });
+
+        // Update the summary counts with filtered data
+        const summaryDiv = document.querySelector('.ship-count-summary');
+        if (summaryDiv) {
+            summaryDiv.innerHTML = this.createShipCountSummary(filteredObjects);
+        }
+    },
+
+    clearFilter() {
+        const table = UIController.elements.scannedObjectsTab.querySelector('table');
+        if (!table) return;
+
+        // Clear cell highlighting
+        document.querySelectorAll('.grid .cell.highlighted').forEach(cell => {
+            cell.classList.remove('highlighted');
+        });
+
+        // Show all rows
+        table.querySelectorAll('tbody tr').forEach(row => {
+            row.classList.remove('hidden');
+        });
+
+        // Reset summary counts to show all objects
+        const rows = table.querySelectorAll('tbody tr:not(.party-group)');
+        const allObjects = Array.from(rows).map(row => ({
+            typeName: row.cells[3].textContent,
+            name: row.cells[2].textContent,
+            iffStatus: row.cells[5].textContent
+        }));
+
+        const summaryDiv = document.querySelector('.ship-count-summary');
+        if (summaryDiv) {
+            summaryDiv.innerHTML = this.createShipCountSummary(allObjects);
+        }
+    },
 
     sortTable(n) {
         const rows = Array.from(UIController.elements.scansTable.rows).slice(1);
