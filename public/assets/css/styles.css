@@ -375,10 +375,15 @@ table td img {
     display: flex;
     gap: 10px;
     align-items: center;
+    margin-bottom: 10px;
+    background-color: #2d2d2d;
+    padding: 10px;
+    border-radius: 4px;
 }
 
 .search-controls .ship-search {
     flex: 1;
+    min-width: 0; /* Prevents search box from overflowing */
 }
 
 .fold-button {
@@ -390,6 +395,7 @@ table td img {
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 32px;
 }
 
 .fold-button:hover {
@@ -399,39 +405,30 @@ table td img {
 .fold-button img {
     width: 12px;
     height: 12px;
+    display: block;
+}
+
+/* Ensure proper spacing in the ship count summary */
+.ship-count-summary {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    padding: 12px;
 }
 
 .count-filter {
+    white-space: nowrap;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 4px 8px;
     border-radius: 4px;
     transition: background-color 0.2s;
 }
 
-.count-filter:hover {
+/* Improve table header styling */
+table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     background-color: #404040;
-}
-
-.party-group td {
-    border-top: 4px solid #000000;
-}
-
-.party-group:first-child td {
-    border-top: none;
-}
-
-.copy-button {
-    background: none;
-    border: none;
-    padding: 4px;
-    cursor: pointer;
-    transition: opacity 0.2s;
-}
-
-.copy-button:hover {
-    opacity: 0.7;
-}
-
-.copy-button img {
-    vertical-align: middle;
 }

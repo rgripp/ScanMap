@@ -759,7 +759,8 @@ filterScannedObjectsByCoordinates(x, y) {
     this.foldAllSquads();
 },
 
-    clearFilter() {
+// Modify the clearFilter method in TableController
+clearFilter() {
     const searchInput = document.getElementById('shipSearch');
     if (searchInput) {
         searchInput.value = '';
@@ -774,35 +775,40 @@ filterScannedObjectsByCoordinates(x, y) {
     });
 
     // Show all rows and reset squad toggles
+    let allObjects = [];
     table.querySelectorAll('tbody tr').forEach(row => {
         row.classList.remove('hidden');
         row.dataset.filteredOut = false;
         
-        if (!row.classList.contains('party-group') && 
-            Array.from(row.classList).some(cls => cls.startsWith('squad-'))) {
-            row.classList.add('hidden');
+        if (!row.classList.contains('party-group')) {
+            // Collect object data for summary
+            allObjects.push({
+                typeName: row.cells[3].textContent,
+                name: row.cells[2].textContent,
+                iffStatus: row.className.includes('friend') ? 'Friend' :
+                          row.className.includes('enemy') ? 'Enemy' :
+                          row.className.includes('neutral') ? 'Neutral' : ''
+            });
+            
+            // Hide squad members by default
+            if (Array.from(row.classList).some(cls => cls.startsWith('squad-'))) {
+                row.classList.add('hidden');
+            }
         }
         
+        // Reset squad toggle icons
         if (row.classList.contains('party-group')) {
-            const toggleIcon = row.querySelector('.toggle-icon');
-            if (toggleIcon) {
+            const toggle = row.querySelector('.squad-toggle');
+            if (toggle) {
+                const toggleIcon = toggle.querySelector('.toggle-icon');
                 toggleIcon.src = '/assets/images/plus.png';
                 toggleIcon.alt = 'Expand';
-                row.querySelector('.squad-toggle').dataset.state = 'collapsed';
+                toggle.dataset.state = 'collapsed';
             }
         }
     });
 
-    // Get all rows for summary update
-    const rows = table.querySelectorAll('tbody tr:not(.party-group)');
-    const allObjects = Array.from(rows).map(row => ({
-        typeName: row.cells[3].textContent,
-        name: row.cells[2].textContent,
-        iffStatus: row.className.includes('friend') ? 'Friend' :
-                  row.className.includes('enemy') ? 'Enemy' :
-                  row.className.includes('neutral') ? 'Neutral' : ''
-    }));
-
+    // Update summary with all objects
     const summaryDiv = document.querySelector('.ship-count-summary');
     if (summaryDiv) {
         summaryDiv.innerHTML = this.createShipCountSummary(allObjects);
