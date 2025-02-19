@@ -141,9 +141,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetchScannedObjects']))
                         Load File
                     </button>
                 </div>
-                
-                <!-- Reset DB Button -->
-                <button type="button" class="reset-button" onclick="handleResetDB()">Reset DB</button>
             </div>
             <div id="notificationContainer"></div>
         </div>

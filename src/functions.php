@@ -39,6 +39,30 @@ function resetDatabase($pdo) {
     }
 }
 
+function deleteScan($pdo, $scanId) {
+    try {
+        // Start transaction
+        $pdo->beginTransaction();
+        
+        // Delete related scanned objects first
+        $stmt = $pdo->prepare("DELETE FROM scannedObjects WHERE scanID = :scanId");
+        $stmt->execute([':scanId' => $scanId]);
+        
+        // Delete the scan
+        $stmt = $pdo->prepare("DELETE FROM scans WHERE id = :scanId");
+        $stmt->execute([':scanId' => $scanId]);
+        
+        // Commit transaction
+        $pdo->commit();
+        
+        return ["message" => "Scan deleted successfully!", "type" => "success"];
+    } catch (PDOException $e) {
+        // Roll back on error
+        $pdo->rollBack();
+        return ["message" => "Error deleting scan: " . $e->getMessage(), "type" => "error"];
+    }
+}
+
 function isScanDuplicate($pdo, $xml) {
     try {
         $stmt = $pdo->prepare("
