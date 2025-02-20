@@ -7,35 +7,49 @@ if (!loadEnvironmentVariables($envFile)) {
     die(json_encode(["message" => "Error: .env file not found.", "type" => "error"]));
 }
 
-// Connect to database
+// Get database instance
 try {
-    $pdo = connectToDatabase();
+    $db = Database::getInstance();
 } catch (PDOException $e) {
     die(json_encode(["message" => "Error connecting to database: ".$e->getMessage(), "type" => "error"]));
 }
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $result = [];
-
-    if (isset($_POST['resetDB'])) {
-        $result = resetDatabase($pdo);
-    } elseif (isset($_POST['deleteScan'])) {
-        $scanId = filter_input(INPUT_POST, 'scanId', FILTER_VALIDATE_INT);
-        if ($scanId) {
-            $result = deleteScan($pdo, $scanId);
-        } else {
-            $result = ["message" => "Invalid scan ID", "type" => "error"];
-        }
-    }
-
     header('Content-Type: application/json');
-    echo json_encode($result);
+    
+    try {
+        $result = [];
+
+        if (isset($_POST['resetDB'])) {
+            $result = resetDatabase($db->getConnection());
+        } elseif (isset($_POST['deleteScan'])) {
+            $scanId = filter_input(INPUT_POST, 'scanId', FILTER_VALIDATE_INT);
+            if ($scanId) {
+                $result = deleteScan($db->getConnection(), $scanId);
+            } else {
+                $result = ["message" => "Invalid scan ID", "type" => "error"];
+            }
+        }
+
+        echo json_encode($result);
+    } catch (Exception $e) {
+        echo json_encode([
+            "message" => "Error processing request: " . $e->getMessage(),
+            "type" => "error"
+        ]);
+    }
     exit;
 }
 
-// Fetch scans data
-$scans = fetchScans($pdo);
+// Fetch scans data using cached query
+$scans = $db->query(
+    "SELECT id, characterName, galX, galY, years, days, hours, minutes, seconds 
+     FROM scans 
+     ORDER BY id DESC",
+    [],
+    true // Use cache
+);
 ?>
 
 <!DOCTYPE html>
